@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Hubble — Design Canvas</title>
+  <link rel="stylesheet" href="tokens.css"/>
+  <style>
+    body { background: #f0eee9; }
+    .screen-img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+    .frame-wrap { background: var(--ink); border-radius: 12px; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,0.18); position: relative; }
+    .frame-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }
+    .frame-overlay {
+      position: absolute; inset: 0; pointer-events: none;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+      border-radius: inherit;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="components/primitives.jsx"></script>
+  <script type="text/babel" src="components/consumer-chat.jsx"></script>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    // Static screenshot artboard
+    function Shot({ src, w = 800, h = 500 }) {
+      return (
+        <div className="frame-wrap" style={{ width: '100%', height: '100%' }}>
+          <img className="screen-img" src={src} alt=""/>
+          <div className="frame-overlay"/>
+        </div>
+      );
+    }
+
+    // Visual variation artboards (live mini-views)
+    function ChatPersonalityVariant({ personality }) {
+      return (
+        <div style={{ width: '100%', height: '100%', overflow: 'hidden', background: 'var(--ink)' }}>
+          <ConsumerChat personality={personality} density="compact" discountIntensity="medium"/>
+        </div>
+      );
+    }
+
+    function ChatDiscountVariant({ intensity }) {
+      return (
+        <div style={{ width: '100%', height: '100%', overflow: 'hidden', background: 'var(--ink)' }}>
+          <ConsumerChat personality="bff" density="compact" discountIntensity={intensity}/>
+        </div>
+      );
+    }
+
+    // Discount-style standalone showcase artboards
+    function DiscountShowcase({ kind }) {
+      const wrap = {
+        padding: 24, background: 'var(--ink)', height: '100%', overflow: 'auto',
+      };
+      const sample = PRODUCTS.anuaCleanser;
+      const carousel = [PRODUCTS.cosrxSnail, PRODUCTS.peachPHCleanser, PRODUCTS.glowAvocado, PRODUCTS.biodanceMask];
+      return (
+        <div style={wrap}>
+          <div className="font-mono" style={{ fontSize: 11, color: 'var(--fg-mute)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>
+            {kind === 'inline' && 'A — Inline subtle card'}
+            {kind === 'carousel' && 'B — Carousel of alternatives'}
+            {kind === 'proactive' && 'C — Proactive AI suggestion'}
+          </div>
+          {kind === 'inline'    && <SponsoredInline product={sample} discount={25} intensity="medium"/>}
+          {kind === 'carousel'  && <SponsoredCarousel products={carousel} intensity="medium"/>}
+          {kind === 'proactive' && <SponsoredProactive product={sample} discount={25} similarTo="redness flares" intensity="medium"/>}
+        </div>
+      );
+    }
+
+    function App() {
+      return (
+        <DesignCanvas>
+          <DCSection id="overview" title="Hubble" subtitle="AI Skincare Concierge — full prototype across consumer + brand surfaces">
+            <DCArtboard id="hero-landing" label="Marketing landing" width={1280} height={720}>
+              <Shot src="screens/landing.png"/>
+            </DCArtboard>
+            <DCArtboard id="hero-quiz" label="Onboarding quiz" width={1280} height={720}>
+              <Shot src="screens/quiz.png"/>
+            </DCArtboard>
+            <DCArtboard id="hero-chat" label="AI chat — primary" width={900} height={720}>
+              <Shot src="screens/chat.png"/>
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection id="consumer-chat" title="Consumer chat — personality variants" subtitle="Three voices for the same shopper context">
+            <DCArtboard id="chat-bff" label="01 · Best friend" width={760} height={900}>
+              <ChatPersonalityVariant personality="bff"/>
+            </DCArtboard>
+            <DCArtboard id="chat-derm" label="02 · Dermatologist" width={760} height={900}>
+              <ChatPersonalityVariant personality="derm"/>
+            </DCArtboard>
+            <DCArtboard id="chat-editor" label="03 · Editorial" width={760} height={900}>
+              <ChatPersonalityVariant personality="editor"/>
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection id="discounts" title="Discount moments" subtitle="Three approaches to surfacing brand-funded offers in the conversation">
+            <DCArtboard id="d-inline" label="A · Inline card" width={520} height={420}>
+              <DiscountShowcase kind="inline"/>
+            </DCArtboard>
+            <DCArtboard id="d-carousel" label="B · Comparison carousel" width={620} height={420}>
+              <DiscountShowcase kind="carousel"/>
+            </DCArtboard>
+            <DCArtboard id="d-proactive" label="C · Proactive AI suggestion" width={620} height={420}>
+              <DiscountShowcase kind="proactive"/>
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection id="discount-intensity" title="Discount intensity" subtitle="Same chat, three intensity dials">
+            <DCArtboard id="int-subtle" label="Subtle" width={760} height={760}>
+              <ChatDiscountVariant intensity="subtle"/>
+            </DCArtboard>
+            <DCArtboard id="int-medium" label="Medium" width={760} height={760}>
+              <ChatDiscountVariant intensity="medium"/>
+            </DCArtboard>
+            <DCArtboard id="int-prominent" label="Prominent" width={760} height={760}>
+              <ChatDiscountVariant intensity="prominent"/>
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection id="brand-suite" title="Brand studio" subtitle="The dashboard beauty brands use to configure Hubble">
+            <DCArtboard id="b-login" label="Login" width={1280} height={720}>
+              <Shot src="screens/login.png"/>
+            </DCArtboard>
+            <DCArtboard id="b-overview" label="Dashboard overview" width={1280} height={720}>
+              <Shot src="screens/overview.png"/>
+            </DCArtboard>
+            <DCArtboard id="b-agent" label="Sales agent builder" width={1280} height={720}>
+              <Shot src="screens/agent.png"/>
+            </DCArtboard>
+            <DCArtboard id="b-survey" label="Conversational survey builder" width={1280} height={720}>
+              <Shot src="screens/survey.png"/>
+            </DCArtboard>
+            <DCArtboard id="b-analytics" label="Analytics" width={1280} height={720}>
+              <Shot src="screens/analytics.png"/>
+            </DCArtboard>
+          </DCSection>
+
+          <DCPostIt x={40} y={40} w={260}>
+            Open <strong>Hubble Prototype.html</strong> for the full clickable prototype with screen-switcher and tweaks. Open any artboard fullscreen here to inspect a single state.
+          </DCPostIt>
+        </DesignCanvas>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>

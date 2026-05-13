@@ -1,0 +1,142 @@
+/* Hubble Design Tokens
+   Aesthetic: Gen-Z playful + editorial elevated, dark-first
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Geist:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Base palette */
+  --ink: #0A0A0A;
+  --ink-2: #141414;
+  --ink-3: #1C1C1C;
+  --ink-4: #262626;
+  --ink-5: #333333;
+  --paper: #F5F1EA;
+  --paper-2: #EBE5DA;
+  --paper-3: #DCD3C2;
+
+  /* Accents */
+  --coral: #FF6B47;
+  --coral-soft: #FFD4C8;
+  --lime: #D4FF4F;
+  --lime-soft: #EAFFA1;
+  --lilac: #C4B5FD;
+  --lilac-soft: #E4DCFE;
+  --rose: #FF9FB6;
+
+  /* Semantic */
+  --bg: var(--ink);
+  --bg-elev: var(--ink-2);
+  --bg-elev-2: var(--ink-3);
+  --fg: var(--paper);
+  --fg-dim: #A8A096;
+  --fg-mute: #6B655B;
+  --border: #2A2724;
+  --border-2: #3A3530;
+  --accent: var(--coral);
+  --accent-2: var(--lime);
+
+  /* Type */
+  --font-display: 'Instrument Serif', 'Times New Roman', serif;
+  --font-ui: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+
+  /* Spacing scale */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+  --s-9: 96px;
+
+  /* Radius */
+  --r-1: 6px;
+  --r-2: 10px;
+  --r-3: 16px;
+  --r-4: 24px;
+  --r-pill: 999px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--font-ui);
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input, textarea { font-family: inherit; }
+
+::selection { background: var(--coral); color: var(--ink); }
+
+.font-display { font-family: var(--font-display); font-weight: 400; letter-spacing: -0.02em; }
+.font-mono { font-family: var(--font-mono); }
+
+/* Utility */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.tag-coral { background: var(--coral); color: var(--ink); }
+.tag-lime  { background: var(--lime);  color: var(--ink); }
+.tag-lilac { background: var(--lilac); color: var(--ink); }
+.tag-ghost { border: 1px solid var(--border-2); color: var(--fg-dim); }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 18px; border-radius: var(--r-pill);
+  font-weight: 500; font-size: 14px; letter-spacing: -0.01em;
+  transition: transform .15s ease, background .15s ease, color .15s ease;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn-primary { background: var(--coral); color: var(--ink); }
+.btn-primary:hover { background: #FF8061; }
+.btn-lime { background: var(--lime); color: var(--ink); }
+.btn-paper { background: var(--paper); color: var(--ink); }
+.btn-ghost { border: 1px solid var(--border-2); color: var(--fg); }
+.btn-ghost:hover { background: var(--ink-3); }
+
+/* Skin-typed avatar dot */
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lime); display: inline-block; }
+.dot-pulse {
+  animation: pulse 1.6s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(212, 255, 79, 0.5);
+}
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(212, 255, 79, 0.5); }
+  70%  { box-shadow: 0 0 0 8px rgba(212, 255, 79, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(212, 255, 79, 0); }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--ink-4); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-5); }
+
+/* Shimmer for loading */
+@keyframes shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: 200px 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, var(--ink-3) 0%, var(--ink-4) 50%, var(--ink-3) 100%);
+  background-size: 400px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+/* Focus */
+*:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; border-radius: 4px; }
