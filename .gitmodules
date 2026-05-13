@@ -1,0 +1,24 @@
+[submodule "conquistador"]
+	path = conquistador
+	url = https://github.com/alex-the-programmer/conquistador.git
+[submodule "conquistador-frontend"]
+	path = conquistador-frontend
+	url = https://github.com/alex-the-programmer/conquistador-frontend.git
+[submodule "conquistador-platform-frontend"]
+	path = conquistador-platform-frontend
+	url = https://github.com/alex-the-programmer/conquistador-platform-frontend.git
+[submodule "commerce-platform-backend"]
+	path = commerce-platform-backend
+	url = https://github.com/alex-the-programmer/commerce-platform-backend.git
+[submodule "commerce-platform-frontend"]
+	path = commerce-platform-frontend
+	url = https://github.com/alex-the-programmer/commerce-platform-frontend.git
+[submodule "commerce-platform-scrapers"]
+	path = commerce-platform-scrapers
+	url = https://github.com/alex-the-programmer/commerce-platform-scrapers.git
+[submodule "car-finding-concierge"]
+	path = car-finding-concierge
+	url = https://github.com/alex-the-programmer/car-finding-concierge.git
+[submodule "car-finding-concierge-frontend"]
+	path = car-finding-concierge-frontend
+	url = https://github.com/alex-the-programmer/car-finding-concierge-frontend.git
