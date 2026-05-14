@@ -5,7 +5,7 @@
 - `conquistador-frontend` — Next.js user-facing frontend
 - `conquistador-platform-frontend` — Next.js platform/admin frontend
 
-## Commerce Platform
+## Commerce Platform - this is the default set of repos. If I don't explicitly tell you to work on some other repos, assume that you're working with the commerce platform (backend, frontend, and scrapers)
 - `commerce-platform-backend` — Node.js/Express + Apollo GraphQL backend, Prisma ORM, Clerk auth, Mastra AI
 - `commerce-platform-frontend` — Next.js frontend
 - `commerce-platform-scrapers` — Node.js scrapers; shares the same Postgres DB as the backend but does not own migrations (see that repo's own CLAUDE.md)
