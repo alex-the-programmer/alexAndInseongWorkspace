@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  commerce-platform-backend:
+    name: Commerce Platform Backend Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: commerce_platform
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout commerce-platform-backend submodule
+        run: git submodule update --init commerce-platform-backend
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: commerce-platform-backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: commerce-platform-backend
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: commerce-platform-backend
+        run: npx prisma generate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/commerce_platform
+
+      - name: Run migrations
+        working-directory: commerce-platform-backend
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/commerce_platform
+
+      - name: Run tests
+        working-directory: commerce-platform-backend
+        run: npm test
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/commerce_platform
+          HASH_IDS_SALT: ${{ secrets.HASH_IDS_SALT }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          PORT: 4020
+          CLERK_AUTHORIZED_PARTY: http://localhost:3020
+          CORS_ORIGIN: http://localhost:3020
