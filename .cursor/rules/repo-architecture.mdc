@@ -1,0 +1,26 @@
+---
+description: Workspace layout — which repos exist and what each one does
+globs:
+alwaysApply: true
+---
+
+# Repo Architecture
+
+## Conquistador
+- `conquistador` — Node.js/Express + Apollo GraphQL backend, Prisma ORM, Clerk auth, Mastra AI
+- `conquistador-frontend` — Next.js user-facing frontend
+- `conquistador-platform-frontend` — Next.js platform/admin frontend
+
+## Commerce Platform - this is the default set of repos. If I don't explicitly tell you to work on some other repos, assume that you're working with the commerce platform (backend, frontend, and scrapers)
+- `commerce-platform-backend` — Node.js/Express + Apollo GraphQL backend, Prisma ORM, Clerk auth, Mastra AI
+- `commerce-platform-frontend` — Next.js frontend
+- `commerce-platform-scrapers` — Node.js scrapers; shares the same Postgres DB as the backend but does not own migrations (see that repo's own CLAUDE.md)
+
+## Car Finding Concierge
+- `car-finding-concierge` — Node.js/Express + Apollo GraphQL backend, Prisma ORM, Clerk auth, Mastra AI
+- `car-finding-concierge-frontend` — Next.js frontend
+
+## Cross-cutting
+- All backends expose a GraphQL API consumed by their corresponding frontends.
+- All backends use Clerk for authentication and Mastra for AI/agentic features.
+- When planning a feature, always explore code across all relevant repos — check whether the work is already partially implemented before proposing it.
