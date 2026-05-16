@@ -1,3 +1,9 @@
+---
+description: Backend architecture, Prisma/database rules, GraphQL conventions, and testing patterns for all backend repos
+globs: commerce-platform-backend/**,conquistador/**,car-finding-concierge/**
+alwaysApply: false
+---
+
 # Backend Guidelines
 
 ## Architecture
