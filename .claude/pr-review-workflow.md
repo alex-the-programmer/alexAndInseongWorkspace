@@ -40,7 +40,6 @@ gh api --method POST repos/<owner>/<repo>/pulls/<N>/comments/<comment_id>/replie
 - Write or update unit tests for every fix with meaningful behavior. Skip tests only for purely cosmetic changes.
 - Run tests for the specific files you touched, not the whole suite. Before dismissing a failing test as pre-existing, verify with `git stash && npx jest <path> && git stash pop`.
 - After each fix, post a short reply on the corresponding thread describing what you actually did (exact files, shape of the change, any new tests). For duplicate threads, post a shorter "same fix covers this thread too" reply on the secondary thread(s). Use the same HEREDOC + JSON pattern from Phase 1.
-- Never commit or push — leave that to the developer.
 - End with a concise summary: files changed, new/updated tests, verification evidence, and anything skipped per the developer's direction.
 
 ## General conventions
