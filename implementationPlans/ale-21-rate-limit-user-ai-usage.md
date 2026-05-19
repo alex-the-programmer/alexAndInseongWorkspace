@@ -172,10 +172,10 @@ Do **not** replace Prisma enforcement with `CostGuardProcessor` alone.
 
 ## TODO
 
-- [ ] Get architect approval for `ai_llm_usage_events` table + indexes
-- [ ] Add `AI_DAILY_BUDGET_CENTS`, `parseGenerateUsage`, `estimateCostCents`, daily sum, `assertUserWithinDailyBudget`
-- [ ] Add `AiLlmUsageEvent` model and run `prisma migrate dev`
-- [ ] Implement `recordLlmUsageEvent` + `trackedAgentGenerate` wrapper
-- [ ] Pre-check + tracked generate on shopping, routine, chat summary, memory extraction paths
-- [ ] Interaction tests for budget logic and `sendShoppingMessage` pre-check behavior
-- [ ] Update `.env.example` and confirm manual limit test
+- [x] Get architect approval for `ai_llm_usage_events` table + indexes
+- [x] Add `AI_DAILY_BUDGET_CENTS`, `parseGenerateUsage`, `estimateCostCents`, daily sum, `assertUserWithinDailyBudget`
+- [x] Add `AiLlmUsageEvent` model and run `prisma migrate dev`
+- [x] Implement `recordLlmUsageEvent` + `trackedAgentGenerate` wrapper
+- [x] Pre-check + tracked generate on shopping, routine, chat summary, memory extraction paths
+- [x] Interaction tests for budget logic and `sendShoppingMessage` pre-check behavior
+- [x] Update `.env.example` and confirm manual limit test
