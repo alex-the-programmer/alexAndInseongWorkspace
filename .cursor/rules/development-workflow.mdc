@@ -15,6 +15,12 @@ alwaysApply: true
 - Create new feature branches off the latest `main`.
 - When a change touches multiple repos, create matching branches in each affected repo.
 
+## Pre-push validation
+- Before committing or pushing, run the repo's checks and fix all failures. Do not push broken code.
+- **Backends** (`commerce-platform-backend`, `conquistador`, `car-finding-concierge`): `npm run lint` then `npm run build`. Run `npm test` when behavior changed.
+- **Frontends**: `npm run lint`, `npm run build`, and tests when applicable.
+- If a repo has no `lint` script, use `npm run build` (which must include typechecking).
+
 ## Pull requests
 - Create PRs against `main` for all repos in this workspace.
 - Always create the PRs at the end of our initial implementation after you're done writing and running unit tests.
