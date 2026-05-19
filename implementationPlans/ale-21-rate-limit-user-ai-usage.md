@@ -57,7 +57,7 @@ Add to `commerce-platform-backend/.env.example`:
 
 ```bash
 # Max estimated AI spend per user per UTC day, in cents. 0 = unlimited (local dev).
-AI_DAILY_BUDGET_CENTS=50
+AI_DAILY_BUDGET_CENTS=5
 ```
 
 ### Database (requires architect approval before migrate)
