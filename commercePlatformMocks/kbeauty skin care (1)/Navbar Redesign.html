@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Navbar redesign — kbeauty</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <style>
+    html, body { margin: 0; padding: 0; background: #f0eee9; font-family: 'Geist', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+
+    /* Shared brand tokens */
+    :root {
+      --cream: #FBF6F0;
+      --cream-2: #F4ECE2;
+      --rose: #E8B7A6;
+      --rose-soft: #F6DDD1;
+      --rose-deep: #C97862;
+      --ink: #2A1F1A;
+      --ink-2: #5B4A40;
+      --ink-3: #8C7A6E;
+      --line: rgba(42,31,26,0.10);
+      --line-2: rgba(42,31,26,0.06);
+    }
+
+    /* The page hint shown under each navbar so the bar reads in context */
+    .ab { font-family: 'Geist', system-ui, sans-serif; color: var(--ink); background: var(--cream); height: 100%; width: 100%; position: relative; overflow: hidden; }
+    .ab .hero {
+      position: absolute; left: 28px; right: 28px; top: 132px; bottom: 28px;
+      background: linear-gradient(180deg, #FFFFFF 0%, #FFF8F2 100%);
+      border-radius: 28px;
+      border: 1px solid rgba(42,31,26,0.05);
+      display: flex; align-items: flex-end; justify-content: flex-start;
+      padding: 44px;
+      overflow: hidden;
+    }
+    .ab .hero::before {
+      content: ''; position: absolute; top: -120px; right: -120px;
+      width: 480px; height: 480px; border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #F6DDD1 0%, rgba(246,221,209,0) 70%);
+    }
+    .ab .hero h1 {
+      font-family: 'Instrument Serif', serif; font-weight: 400;
+      font-size: 88px; line-height: 0.95; letter-spacing: -0.02em;
+      margin: 0; color: var(--ink); max-width: 60%;
+    }
+    .ab .hero h1 i { font-style: italic; color: var(--rose-deep); }
+
+    /* Common nav primitives */
+    .navline { font-family: 'Geist', system-ui, sans-serif; font-size: 15px; font-weight: 500; letter-spacing: -0.005em; color: var(--ink); }
+    .navline-sm { font-size: 13px; font-weight: 500; color: var(--ink-2); }
+
+    /* Reusable circle button */
+    .iconbtn {
+      width: 40px; height: 40px; border-radius: 999px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: transparent; border: 1px solid var(--line); color: var(--ink);
+      cursor: pointer; transition: background .15s, border-color .15s;
+      position: relative; flex: 0 0 auto;
+    }
+    .iconbtn:hover { background: rgba(232,183,166,0.18); }
+    .iconbtn svg { width: 18px; height: 18px; }
+
+    .dot {
+      position: absolute; top: 7px; right: 8px; width: 7px; height: 7px; border-radius: 50%;
+      background: var(--rose-deep); border: 2px solid var(--cream);
+    }
+    .badge {
+      position: absolute; top: -3px; right: -3px; min-width: 18px; height: 18px; padding: 0 5px;
+      border-radius: 999px; background: var(--ink); color: #fff;
+      font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center;
+      border: 2px solid var(--cream);
+    }
+
+    /* Avatar */
+    .avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: linear-gradient(135deg, #F6DDD1 0%, #E8B7A6 100%);
+      color: var(--ink); font-weight: 600; font-size: 13px;
+      display: inline-flex; align-items: center; justify-content: center;
+      flex: 0 0 auto; letter-spacing: -0.01em;
+    }
+
+    /* Wordmark */
+    .wordmark {
+      font-family: 'Instrument Serif', serif; font-weight: 400;
+      font-size: 30px; line-height: 1; letter-spacing: -0.01em; color: var(--ink);
+      display: inline-flex; align-items: baseline; gap: 4px;
+    }
+    .wordmark .dotmark { width: 6px; height: 6px; border-radius: 50%; background: var(--rose-deep); display: inline-block; transform: translateY(-2px); }
+
+    /* === V1: Editorial split === */
+    .v1 { position: absolute; top: 0; left: 0; right: 0; padding: 24px 36px; display: flex; align-items: center; gap: 32px; }
+    .v1 .links { display: flex; align-items: center; gap: 28px; flex: 1; justify-content: center; }
+    .v1 .links a {
+      position: relative; text-decoration: none; color: var(--ink); font-size: 15px; font-weight: 500;
+      padding: 6px 2px; letter-spacing: -0.005em;
+    }
+    .v1 .links a.active::after {
+      content: ''; position: absolute; left: 0; right: 0; bottom: -2px; height: 2px;
+      background: var(--rose-deep); border-radius: 2px;
+    }
+    .v1 .right { display: flex; align-items: center; gap: 10px; }
+    .v1 .userchip {
+      display: inline-flex; align-items: center; gap: 10px; padding: 4px 12px 4px 4px;
+      border: 1px solid var(--line); border-radius: 999px; cursor: pointer; background: transparent;
+      font: inherit; color: var(--ink); font-size: 14px; font-weight: 500;
+    }
+    .v1 .userchip:hover { background: rgba(232,183,166,0.14); }
+    .v1 .userchip .caret { color: var(--ink-3); }
+
+    /* === V2: Single floating pill === */
+    .v2-wrap { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); }
+    .v2 {
+      background: #FFFFFF; border: 1px solid var(--line);
+      border-radius: 999px; padding: 8px 8px 8px 22px;
+      display: inline-flex; align-items: center; gap: 6px;
+      box-shadow: 0 12px 30px -18px rgba(42,31,26,0.25), 0 2px 6px -2px rgba(42,31,26,0.08);
+    }
+    .v2 .brand { font-family: 'Instrument Serif', serif; font-size: 24px; line-height: 1; color: var(--ink); padding-right: 14px; border-right: 1px solid var(--line); margin-right: 6px; }
+    .v2 .link {
+      padding: 9px 16px; border-radius: 999px; font-size: 14.5px; font-weight: 500;
+      color: var(--ink-2); cursor: pointer; transition: background .15s, color .15s;
+    }
+    .v2 .link:hover { color: var(--ink); background: var(--cream-2); }
+    .v2 .link.active { background: var(--ink); color: #FFFFFF; }
+    .v2 .sep { width: 1px; height: 22px; background: var(--line); margin: 0 6px; }
+    .v2 .tray { display: inline-flex; align-items: center; gap: 4px; }
+    .v2 .tray .iconbtn { width: 36px; height: 36px; border: none; }
+    .v2 .tray .iconbtn:hover { background: var(--cream-2); }
+    .v2 .userpill {
+      display: inline-flex; align-items: center; gap: 8px; padding: 4px 14px 4px 4px;
+      border-radius: 999px; background: var(--cream-2); margin-left: 4px;
+    }
+    .v2 .userpill .avatar { width: 28px; height: 28px; font-size: 12px; }
+    .v2 .userpill .name { font-size: 13.5px; font-weight: 500; color: var(--ink); }
+
+    /* === V3: Centered serif logo, dual-side === */
+    .v3 {
+      position: absolute; top: 0; left: 0; right: 0; height: 88px;
+      display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+      padding: 0 40px;
+      border-bottom: 1px solid var(--line-2);
+      background: rgba(251,246,240,0.7); backdrop-filter: blur(10px);
+    }
+    .v3 .nav-l { display: flex; gap: 28px; align-items: center; }
+    .v3 .nav-l a, .v3 .nav-r .txt {
+      text-decoration: none; color: var(--ink); font-size: 14px; font-weight: 500;
+      letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer;
+    }
+    .v3 .nav-l a.active { color: var(--rose-deep); }
+    .v3 .center { font-family: 'Instrument Serif', serif; font-size: 36px; line-height: 1; letter-spacing: -0.01em; color: var(--ink); text-align: center; }
+    .v3 .center .sub { display: block; font-family: 'Geist Mono', monospace; font-size: 9.5px; letter-spacing: 0.3em; color: var(--ink-3); margin-top: 4px; text-transform: uppercase; }
+    .v3 .nav-r { display: flex; align-items: center; justify-content: flex-end; gap: 18px; }
+    .v3 .nav-r .greet { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+    .v3 .nav-r .greet .hi { font-size: 10px; letter-spacing: 0.18em; color: var(--ink-3); text-transform: uppercase; }
+    .v3 .nav-r .greet .name { font-size: 14px; font-weight: 600; color: var(--ink); }
+
+    /* === V4: Two-row utility + main === */
+    .v4 { position: absolute; top: 0; left: 0; right: 0; background: var(--cream); }
+    .v4 .util {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 36px; border-bottom: 1px solid var(--line-2);
+      font-size: 12px; color: var(--ink-3); letter-spacing: 0.02em;
+    }
+    .v4 .util .promo { display: inline-flex; align-items: center; gap: 8px; }
+    .v4 .util .promo .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--rose-deep); }
+    .v4 .util .links { display: flex; gap: 18px; }
+    .v4 .util .links span { cursor: pointer; }
+    .v4 .util .links span:hover { color: var(--ink); }
+
+    .v4 .main {
+      display: flex; align-items: center; padding: 16px 36px; gap: 36px;
+    }
+    .v4 .main .nav {
+      display: flex; gap: 4px; flex: 1; margin-left: 24px;
+    }
+    .v4 .main .nav a {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 9px 16px; border-radius: 12px; text-decoration: none;
+      color: var(--ink-2); font-size: 14.5px; font-weight: 500;
+      transition: background .15s, color .15s;
+    }
+    .v4 .main .nav a:hover { background: var(--cream-2); color: var(--ink); }
+    .v4 .main .nav a.active { background: var(--ink); color: #FFFFFF; }
+    .v4 .main .nav a .ic { opacity: 0.7; }
+    .v4 .main .nav a.active .ic { opacity: 1; }
+    .v4 .main .actions { display: flex; align-items: center; gap: 10px; }
+
+    /* Search container for V4 */
+    .v4 .search {
+      display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px;
+      background: #FFFFFF; border: 1px solid var(--line); border-radius: 999px;
+      color: var(--ink-3); font-size: 13.5px; min-width: 220px; cursor: text;
+    }
+    .v4 .search .kbd {
+      margin-left: auto; font-family: 'Geist Mono', monospace; font-size: 10.5px;
+      padding: 2px 6px; border: 1px solid var(--line); border-radius: 4px; color: var(--ink-3);
+    }
+
+    /* Small note labels on artboards */
+    .note { color: var(--ink-3); font-size: 12.5px; line-height: 1.5; max-width: 520px; }
+    .note b { color: var(--ink); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="navbar-icons.jsx"></script>
+  <script type="text/babel" src="navbar-app.jsx"></script>
+</body>
+</html>
