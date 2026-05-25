@@ -499,7 +499,7 @@ Primary CTA still opens step grid from skin-quiz `ROUTINE_STEPS` question config
 
 ### Out of scope
 
-- Redesigning full routine editor after recommendations
+- Redesigning full routine editor after recommendations — see [ale-34-routine-page-redesign.md](ale-34-routine-page-redesign.md)
 - Changing skin-quiz content or full-page `/quizzes/skin-quiz` flow
 - Chat CTA URL changes (unless product wants `?openOnboarding=1` deep link)
 - New scraper/catalog work for popular picks (static seed chips v1)
