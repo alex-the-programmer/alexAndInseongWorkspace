@@ -218,4 +218,4 @@ npm test
 - [x] Optional: `title` on truncated chat title row
 - [x] Run `npm run lint`, `npm run build`, `npm test` (build + tests pass; repo lint has pre-existing failures unrelated to this ticket)
 - [ ] Manual QA per checklist above
-- [ ] Open PR against `main` for `commerce-platform-frontend`
+- [x] Open PR against `main` for `commerce-platform-frontend` — https://github.com/alex-the-programmer/commerce-platform-frontend/pull/10
