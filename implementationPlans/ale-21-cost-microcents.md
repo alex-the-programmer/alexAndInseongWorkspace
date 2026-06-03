@@ -9,9 +9,9 @@ Follow-up to [ALE-21 rate limiting](ale-21-rate-limit-user-ai-usage.md). Per-eve
 | Table | Column | Type | Notes |
 | ----- | ------ | ---- | ----- |
 | `ai_llm_usage_events` | `costMicrocents` | Int | Source of truth; 10_000 microcents = 1¢ |
-| `ai_llm_usage_events` | `costCents` | Int | Display only; `round(costMicrocents / 10000)` |
 | `ai_llm_daily_spends` | `totalCostMicrocents` | Int | Budget enforcement uses this |
-| `ai_llm_daily_spends` | `totalCostCents` | Int | Display only; derived from microcent total |
+
+**ALE-43:** Removed `costCents` and `totalCostCents`; display cents are derived in app code via `microcentsToDisplayCents()`.
 
 Migration: `20260518140000_ale_21_cost_microcents` backfills microcents from stored token counts and model pricing.
 
