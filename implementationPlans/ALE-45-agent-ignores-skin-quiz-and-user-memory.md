@@ -10,6 +10,8 @@
 
 **Database changes:** None.
 
+**Shipped:** [commerce-platform-backend#18](https://github.com/alex-the-programmer/commerce-platform-backend/pull/18) (merged). Also closes [ALE-37](https://linear.app/alexandinseongprojects/issue/ALE-37/have-chats-infer-information-like-pricing-skin-conerns-etc-from-the) — same root cause (positive vs negative framing).
+
 ### Same issue as ALE-37 (consolidate tickets)
 
 [Linear ALE-37](https://linear.app/alexandinseongprojects/issue/ALE-37/have-chats-infer-information-like-pricing-skin-conerns-etc-from-the) (**Todo**): “have chats infer information like pricing, skin concerns, etc from the skin quiz if available.”
@@ -297,5 +299,5 @@ npm test
 - [x] Replace quiz/routine JSON system messages with known profile block in `invokeShoppingAgent.ts`
 - [x] Update `shoppingAgent.ts` and per-turn/opening prompts
 - [x] Add `[ShoppingAgent] known profile` logging
-- [ ] Manual QA checklist (§8)
+- [x] Manual QA checklist (§8)
 - [x] `npm run lint`, `npm run build`, `npm test` in backend
