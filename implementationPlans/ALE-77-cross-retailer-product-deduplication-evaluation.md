@@ -579,6 +579,69 @@ After each rollout batch:
 
 ---
 
+## Shipped (2026-06-13)
+
+**Linear:** [ALE-77](https://linear.app/dewly/issue/ALE-77/evaluate-and-extend-cross-retailer-product-deduplication) — **Done**
+
+| Repo | PR | Merge commit |
+|------|-----|--------------|
+| `commerce-platform-backend` | https://github.com/alex-the-programmer/commerce-platform-backend/pull/36 | `2cc8231` |
+| `commerce-platform-scrapers` | https://github.com/alex-the-programmer/commerce-platform-scrapers/pull/18 | `f73214b` |
+| Workspace (this repo) | Submodule ref sync | `749aa14` |
+
+### Delivered
+
+**Phase 0 + 0.5 — Brand dedup (local DB)**
+
+- v1 case/whitespace merge: **2,213 → 1,859** brands
+- v2 aggressive punctuation/spacing merge: **1,859 → 1,781** brands (74 groups, 78 rows merged)
+- Scrapers: `resolveBrandByName.ts` with aggressive fallback on ingest
+
+**Phase 3 — Multi-seller product dedup (local DB)**
+
+- Replaced OY×SK-only flow with all-seller union-find cluster merge
+- Key scripts: `buildProductMatchCandidates.ts`, `mergeMatchedProducts.ts` (`--mode=clusters` default), `productDedupPairwiseCostEstimate.ts`
+- Iterative passes converged: **~17,197** active products, **~25,870** tombstones, **~1,032** multi-seller active; consecutive dry-runs show **0** remaining merges
+
+**Merge tombstone chain fix (follow-up PRs above)**
+
+After the first full merge pass, local DB had orphaned `seller_products` on tombstoned rows, multi-hop `mergedIntoProductId` chains, and occasional self-referencing tombstones.
+
+| Change | Purpose |
+|--------|---------|
+| `scripts/lib/repointProductForeignKeys.ts` | Move FKs from merged row to canonical survivor |
+| `scripts/lib/flattenProductMergeChains.ts` | Flatten chains, fix self-refs, break cycles |
+| `scripts/lib/executeProductMerge.ts` | Flatten + repoint on every merge |
+| `scripts/repairProductMergeChains.ts` | One-time repair for existing bad chains |
+| `scripts/lib/__tests__/executeProductMerge.test.ts` | Regression coverage |
+| Scrapers `resolveCanonicalProductId.ts` + all `enrichProductPdp.ts` jobs | Resolve tombstone `productId` before PDP enrich queue |
+
+### Production runbook (if dedup only ran locally)
+
+```bash
+cd commerce-platform-backend
+npx dotenv-cli -e .env -e .env.local -- tsx scripts/repairProductMergeChains.ts
+npx dotenv-cli -e .env -e .env.local -- tsx scripts/mergeMatchedProducts.ts
+```
+
+Re-run `mergeMatchedProducts.ts` after each new seller catalog ingest.
+
+### Explicitly deferred (not in shipped PRs)
+
+- Phase 1 evaluation (ground truth, precision/recall baseline)
+- Phase 2.2+ GTIN / deterministic signal inventory
+- Schema rename `primaryProductId` / `secondaryProductId` (architect approval)
+- `getShoppingProductCardsBatch` multi-hop tombstone follow (defense-in-depth optional)
+- Same-seller shade/variant grouping (e.g. SK “(3 Colors)” listings) — separate from cross-retailer dedup
+- Deprecate `runLlmProductMatching.ts` in docs/comments
+- Full unit test matrix in §3.6 (blocking, clusters, evaluate — partial: `executeProductMerge.test.ts` only)
+
+### Investigation notes (not bugs)
+
+Spot-check of Style Korean-only shade variants (e.g. Cloud Blur Lipstick, Cover Flex Cushion) confirmed **correct non-merge**: cross-seller-only policy, distinct GTINs per shade, single-seller brand buckets excluded from cross-retailer edges.
+
+---
+
 ## TODO
 
 ### Phase 0 — Brand dedup (first)
@@ -623,7 +686,8 @@ After each rollout batch:
 - [x] Phase 3.3 — `productDedupClusters.ts` + `productDedupLogic.ts` + `mergeProductDedupClusters.ts`
 - [x] Phase 3.4 — `mergeMatchedProducts.ts --mode=clusters` (union-find + canonical root picker)
 - [x] Phase 3.4 — Full-seller live merge complete (local: iterative passes converged — **~25,870** product tombstones total; **17,197** active products, **1,032** multi-seller active; two consecutive dry-runs show 0 remaining merges)
+- [x] Phase 3 — Merge tombstone chain repair (`flattenProductMergeChains`, `repointProductForeignKeys`, `repairProductMergeChains.ts`, scraper canonical resolution)
 - [ ] Phase 3 — Refactor `executeProductMerge` comments / candidate schema naming (architect approval)
 - [x] Phase 3 — Full-seller rollout verification (local DB: converged dry-run; re-run `mergeMatchedProducts.ts` after new seller ingest)
-- [ ] Phase 3 — Unit/interaction tests for blocking, clusters, merge, evaluate
+- [ ] Phase 3 — Unit/interaction tests for blocking, clusters, merge, evaluate (partial: `executeProductMerge.test.ts` shipped)
 - [ ] Deprecate `runLlmProductMatching.ts` and OY-primary conventions in docs/comments
