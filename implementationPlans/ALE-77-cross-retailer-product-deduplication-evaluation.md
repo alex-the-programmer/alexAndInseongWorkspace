@@ -60,21 +60,23 @@ flowchart TD
 4. **Prefix fallback** — if token overlap fails, match when either normalized name contains the other’s first 12 characters.
 5. **Cap** — at most K counterpart candidates per product per run (`PRODUCT_DEDUP_MAX_COUNTERPARTS_PER_PRODUCT`, rename from `PRODUCT_DEDUP_MAX_OY_PER_SK`).
 
-Implementation today: `lib/productDedupBlocking.ts`, `buildProductMatchCandidates.ts` (still OY×SK asymmetric — **to be generalized**).
+Implementation: `scripts/lib/productDedupBlocking.ts` (`isBlockedPair`, `significantTokens`); edges built in `estimatePairwiseEdgesForBrand` inside `scripts/lib/productDedup/`.
 
 **Canonical root selection (within a cluster, not a “primary retailer”):**
 
-When collapsing a connected component, pick **one** surviving `products.id` as the canonical row (`mergedIntoProductId` chain points here). Tie-breakers in order:
+When collapsing a connected component, pick **one** surviving `products.id` as the canonical row (`mergedIntoProductId` chain points here). Tie-breakers in order (`pickCanonicalProduct` in `productDedupLogic.ts`):
 
 1. Row that already has the **most `seller_products`** (preserves existing multi-retailer merges).
-2. Row with **richest taxonomy** — best `categoryId` / most `product_seller_specs` (OY often wins here but is **not required**).
+2. Row with **most `product_seller_specs`** (`specCount` — not `categoryId`; category is loaded but unused in sort).
 3. **Lowest `products.id`** (stable deterministic fallback).
 
 Display name, thumbnail, and ingredients for cards already resolve from **specs on the canonical row** ([ALE-76](./ALE-76-extend-catalog-spec-resolution-new-retailers.md)); they do not require OY to be in the cluster.
 
 ---
 
-## Current architecture (audit)
+## Current architecture (as-built, post-ALE-77)
+
+> **Historical note:** Before ALE-77, dedup was OY Global × Style Korean only via `product_match_candidates`. That path still exists as `mergeMatchedProducts.ts --mode=candidates` but is **not** the production merge path.
 
 ### Data model
 
@@ -85,33 +87,56 @@ Display name, thumbnail, and ingredients for cards already resolve from **specs 
 | `products.mergedIntoProductId` | Tombstone pointer when a duplicate row was merged into a canonical row |
 | `seller_products` | `(sellerId, productId)` — retailer listing; **unique per seller per product** |
 | `seller_product_prices` | Price per `seller_product` + currency |
-| `product_match_candidates` | Duplicate **pair** with `matchMethod`, `status`. **Legacy:** `primaryProductId` / `secondaryProductId` implied OY→SK direction; **target:** unordered pair or explicit `sellerAId`/`sellerBId` |
+| `product_match_candidates` | Optional audit table for persisted pairs (`matchMethod: blocked_heuristic`). **Legacy:** `primaryProductId` / `secondaryProductId` ordered by lower `products.id` via `orderUndirectedPair`; not used by cluster merge hot path |
 
-`ProductMatchStatus` in v1: `PENDING` (or legacy `APPROVED`/`REJECTED`) → merge → `MERGED`. No LLM review step.
-
-**Legacy limitation:** `primaryProductId` / `secondaryProductId` and “OY is always primary” in `executeProductMerge` are **OY×SK artifacts**, not the long-term model.
+`ProductMatchStatus`: `PENDING` (or legacy `APPROVED`/`REJECTED`) → merge → `MERGED`. No LLM review step.
 
 ### Pipeline scripts (`commerce-platform-backend/scripts/`)
 
-| Script | What it does | Limitations |
-|--------|--------------|-------------|
-| `buildProductMatchCandidates.ts` | For each overlapping brand (OY ∩ SK), token-overlap blocking; inserts `PENDING` rows | **OY × SK only**, asymmetric primary/secondary — replace with all-seller-pairs-in-brand |
-| `lib/productDedupBlocking.ts` | `significantTokens`, overlap ≥2 or 12-char prefix match | No volume/shade normalization — can false-merge variants with similar titles |
-| `mergeMatchedProducts.ts` | Runs `executeProductMerge` for all candidates where `status != MERGED` | **Intentional** — auto-merge heuristic matches regardless of legacy LLM `REJECTED` status; must use **cluster canonical root**, not fixed primary |
-| `lib/executeProductMerge.ts` | Moves `seller_products`, specs, reviews, cart refs to **survivor**; sets merged row tombstone | Survivor = canonical root from cluster picker, **not** “always OY” |
-| `runLlmProductMatching.ts` | ~~Batch LLM scoring~~ | **Removed from pipeline** — do not run for dedup |
-| `analyzeProductDedup*.ts` | Ad-hoc DB exploration (counts, brand overlap, name duplicates) | Not a repeatable metrics report |
+| Script / module | What it does |
+|-----------------|--------------|
+| `brandDedupReport.ts` | Audit duplicate brand groups; `--mode=v1\|v2`; writes `fixtures/brand-dedup/report.json` or `report-v2.json` |
+| `mergeDuplicateBrands.ts` | Merge brand groups; `--dry-run`, `--limit=N`, `--mode=v1\|v2` |
+| `lib/executeBrandMerge.ts` | Repoints `products.brandId`, `chatConsideredBrand`, `couponProgram.brandId`; **hard-deletes** duplicate brands; `resolveBrandMergePlan()` |
+| `lib/brandDedup/` | `normalizeBrandName`, `normalizeBrandNameAggressive`, `groupDuplicateBrands`, `pickCanonicalBrand`, `pickDisplayBrandName` (casing score) |
+| `buildProductMatchCandidates.ts` | All-seller-pairs-in-brand edge estimate; `--persist` optional (writes candidates); default count-only |
+| `lib/productDedupBlocking.ts` | `significantTokens`, `isBlockedPair` (token overlap + 12-char prefix) |
+| `lib/productDedup/` | `productDedupConfig`, `productDedupData`, `estimatePairwiseEdges`, `productDedupClusters`, `productDedupLogic`, `mergeProductDedupClusters`, `paths` |
+| `mergeMatchedProducts.ts` | **`--mode=clusters` (default):** live recompute + union-find + merge. **`--mode=candidates`:** legacy DB candidates. `--dry-run`, `--limit-components`, `--limit-merges`, env `PRODUCT_DEDUP_MERGE_LIMIT` |
+| `productDedupPairwiseCostEstimate.ts` | Phase 2.1 volume estimate → `fixtures/product-dedup/pairwise-cost-estimate.json` |
+| `repairProductMergeChains.ts` | One-time repair: flatten chains, break cycles, repoint orphaned offers on tombstones; up to 5 iterations; `--dry-run` |
+| `lib/executeProductMerge.ts` | Resolves primary via `resolveActiveProductId`; repoints FKs + tombstones pointing at secondary; sets tombstone |
+| `lib/repointProductForeignKeys.ts` | Moves `productSellerSpec`, `cartProduct`, `orderProduct`, `couponProgramProduct`, `productReview`, `productReviewSummary`, `sellerProduct` (deletes prices on seller clash) |
+| `lib/flattenProductMergeChains.ts` | `fixSelfReferencingMergeTombstones`, `flattenProductMergeChains`, `breakProductMergeCycles` |
+| `runLlmProductMatching.ts` | **Out of pipeline** — do not run for dedup |
+| `analyzeProductDedup*.ts` | Ad-hoc exploration only |
+
+**Env:** `PRODUCT_DEDUP_MIN_TOKEN_OVERLAP` (default 2), `PRODUCT_DEDUP_MAX_COUNTERPARTS_PER_PRODUCT` (default 25; alias `PRODUCT_DEDUP_MAX_OY_PER_SK`).
+
+### Cluster merge hot path (default)
+
+`mergeProductDedupClusters` does **not** read `product_match_candidates`. Per run:
+
+1. `loadDedupBrandBuckets` — active products (`mergedIntoProductId IS NULL`), exclude `Unknown brand`, **only brands with listings on ≥2 distinct sellers**
+2. `estimatePairwiseEdgesForBrand` — cross-**seller** pairs only (nested seller loops; same-seller rows never edge)
+3. `buildComponentsFromEdges` — union-find
+4. `pickCanonicalProduct` + `executeProductMerge` per non-root member (with `resolveActiveProductId` cache)
 
 ### Runtime resolution
 
-- `src/interactions/catalog/resolveCanonicalProduct.ts` — APIs follow `mergedIntoProductId` chain.
-- `commerce-platform-scrapers/src/db/resolveCanonicalProductRow.ts` — scrapers resolve tombstones on re-ingest.
+- `src/interactions/catalog/resolveCanonicalProduct.ts` — APIs follow full `mergedIntoProductId` chain (cycle-safe, 20-hop cap).
+- `getShoppingProductCardsBatch` — follows **at most one** tombstone hop for offers lookup (defense-in-depth gap if chains not flattened).
+- `commerce-platform-scrapers/src/db/resolveCanonicalProductRow.ts` — scrapers resolve tombstones on re-ingest (full chain).
+- `commerce-platform-scrapers/src/db/resolveCanonicalProductId.ts` — thin wrapper; used by all `enrichProductPdp.ts` jobs before enqueue.
+- `commerce-platform-scrapers/src/db/resolveBrandByName.ts` — v1 + v2 SQL lookup on ingest; **duplicates** normalize helpers from backend (not a shared package).
 
-### What already works post-merge
+**Dedup scripts have not been run on production DB** — only local. See Shipped § production runbook.
 
-- `listSellerOffersForProduct` loads all `seller_products` on the canonical product and returns per-retailer prices.
-- `getShoppingProductCardsBatch` picks lowest linkable offer across sellers on the canonical product.
-- **Gap:** Without dedup, each retailer’s listing sits on a separate `products` row, so price comparison across retailers for the “same” SKU does not happen.
+### What works post-merge
+
+- `listSellerOffersForProduct` loads all `seller_products` on the canonical product.
+- `getShoppingProductCardsBatch` picks lowest linkable offer when IDs point at canonical or one-hop tombstone.
+- Without dedup, each retailer listing sits on a separate `products` row → no cross-retailer price comparison.
 
 ### Brand table — root cause of duplicates
 
@@ -492,14 +517,14 @@ Phase 2 exit: confirm edge volume is acceptable and union-find clustering handle
 
 ### 3.1 Seller configuration
 
-Replace `lib/productDedupSellers.ts` with `lib/productDedupConfig.ts`:
+`lib/productDedupConfig.ts` (replaced legacy `productDedupSellers.ts`):
 
 - List of all dedup-enabled `sellerId`s (flat list — **no primary ordering**)
 - Optional per-seller spec prefix map (for future GTIN pass)
 
 ### 3.2 Multi-retailer candidate builder
 
-Replace pairwise OY×SK script with `buildProductMatchCandidates.ts` (or `buildProductMatchGraph.ts`):
+`buildProductMatchCandidates.ts`:
 
 ```
 for each brandId (excluding Unknown):
@@ -544,16 +569,17 @@ After each rollout batch:
 
 ### 3.6 Tests
 
-| Test | Type |
-|------|------|
-| `executeBrandMerge.test.ts` | Interaction — repoints `products.brandId`, handles chat/coupon clashes, deletes duplicate brand |
-| `normalizeBrandName.test.ts` | Unit — case, whitespace, v1 edge cases |
-| `normalizeBrandNameAggressive.test.ts` | Unit — punctuation/spacing; guardrails for prefix/suffix brands |
-| `productDedupBlocking.test.ts` | Unit — token overlap edge cases |
-| `productDedupClusters.test.ts` | Unit — union-find, transitive A-B-C, canonical root tie-breakers, OY-absent cluster |
-| `executeProductMerge.test.ts` | Interaction — merge moves `seller_products`, tombstone, no duplicate seller clash |
-| `productDedupEvaluate.test.ts` | Unit — metrics from fixture ground truth |
-| `resolveCanonicalProduct.test.ts` | Extend — multi-hop chain after several merges |
+| Test | Type | Shipped? |
+|------|------|----------|
+| `src/__tests__/scripts/executeBrandMerge.test.ts` | Interaction — repoints `products.brandId`, chat/coupon clashes, deletes duplicate brand | Yes |
+| `scripts/lib/brandDedup/__tests__/normalizeBrandName.test.ts` | Unit — v1 + aggressive in one file | Yes |
+| `scripts/lib/brandDedup/__tests__/brandDedupLogic.test.ts` | Unit — grouping, canonical pick | Yes |
+| `productDedupBlocking.test.ts` | Unit — token overlap edge cases | No |
+| `scripts/lib/productDedup/__tests__/productDedupClusters.test.ts` | Unit — union-find, canonical root, OY-absent estimate | Yes |
+| `scripts/lib/__tests__/executeProductMerge.test.ts` | Interaction — chain flatten + offer repoint on tombstones | Yes |
+| `productDedupEvaluate.test.ts` | Unit — metrics from fixture ground truth | No (Phase 1) |
+| `resolveCanonicalProduct.test.ts` | Extend — multi-hop chain | No |
+| `commerce-platform-scrapers/src/db/resolveBrandByName.test.ts` | Unit — v1 + aggressive lookup | Yes |
 
 ---
 
@@ -642,6 +668,123 @@ Spot-check of Style Korean-only shade variants (e.g. Cloud Blur Lipstick, Cover 
 
 ---
 
+## As-built reference (for refactor)
+
+Use this section as the source of truth for code navigation. Supersedes any pre-ship “audit” language elsewhere in the plan.
+
+### Module map — `commerce-platform-backend`
+
+```
+scripts/
+  brandDedupReport.ts
+  mergeDuplicateBrands.ts
+  buildProductMatchCandidates.ts
+  mergeMatchedProducts.ts
+  productDedupPairwiseCostEstimate.ts
+  repairProductMergeChains.ts
+  lib/
+    productDedupBlocking.ts              # at lib root (not under productDedup/)
+    executeBrandMerge.ts
+    executeProductMerge.ts
+    repointProductForeignKeys.ts
+    flattenProductMergeChains.ts
+    brandDedup/
+      normalizeBrandName.ts              # v1 + aggressive + isUnknownBrandName
+      brandDedupLogic.ts                 # groupDuplicateBrands, pickCanonicalBrand, pickDisplayBrandName
+      paths.ts
+      __tests__/
+    productDedup/
+      productDedupConfig.ts              # getDedupSellers, readProductDedupConfig, UNKNOWN_BRAND_NAME
+      productDedupData.ts                # loadDedupBrandBuckets
+      estimatePairwiseEdges.ts           # estimatePairwiseEdgesForBrand (shared by merge + estimate script)
+      productDedupClusters.ts            # UnionFind, sellerPairKey
+      productDedupLogic.ts               # pickCanonicalProduct, buildComponentsFromEdges, resolveActiveProductId
+      mergeProductDedupClusters.ts       # cluster merge orchestration
+      paths.ts
+      __tests__/productDedupClusters.test.ts
+    __tests__/executeProductMerge.test.ts
+  fixtures/
+    brand-dedup/report.json, report-v2.json
+    product-dedup/pairwise-cost-estimate.json
+src/__tests__/scripts/executeBrandMerge.test.ts
+```
+
+### Module map — `commerce-platform-scrapers`
+
+```
+src/db/
+  resolveBrandByName.ts        # duplicates normalize helpers from backend; raw SQL v1/v2 lookup
+  resolveBrandByName.test.ts
+  resolveCanonicalProductId.ts # wraps resolveCanonicalProductRow
+  resolveCanonicalProductRow.ts  # pre-existing; full chain walk
+  isUniqueConstraintError.ts   # P2002 helper for brand/spec create races
+  upserts/upsertProductSpecStringRows.ts  # race-safe sellerSpec create
+  upserts/upsertProductFrom*Hit.ts       # 18 retailers → resolveBrandByName
+src/jobs/*/enrichProductPdp.ts           # 18 retailers → resolveCanonicalProductId before enqueue
+```
+
+**Refactor note:** Brand normalize logic is duplicated across repos — no shared package today.
+
+### Eligibility rules (why pairs/clusters are skipped)
+
+| Rule | Where | Effect |
+|------|-------|--------|
+| Unknown brand | `loadDedupBrandBuckets`, `mergeDuplicateBrands`, scraper | Excluded from product dedup / brand merge |
+| Brand must span ≥2 sellers | `loadDedupBrandBuckets` filter | Single-retailer-only brands never enter product dedup (e.g. SK-only shade SKUs) |
+| Cross-seller edges only | `estimatePairwiseEdgesForBrand` seller-pair loops | Two listings on the **same** seller never merge via heuristic |
+| Active products only | `mergedIntoProductId IS NULL` in bucket load | Tombstones excluded from blocking |
+| Shade/size ambiguity | `isBlockedPair` name-only | No volume/GTIN gate in v1 — false-merge risk for similar titles |
+
+### `executeProductMerge` contract
+
+1. `resolveActiveProductId(primary)` — follow tombstone chain (cycle-safe, max 20 hops).
+2. In transaction: find tombstones pointing at secondary; `repointProductForeignKeys` from secondary **and** those tombstones to primary.
+3. Set `secondary.mergedIntoProductId = primary`; flatten children pointing at secondary.
+
+`resolveActiveProductId` in `productDedupLogic.ts` is the shared script-layer resolver (also used by `repairProductMergeChains`).
+
+### `executeBrandMerge` contract
+
+- Repoints: `products.brandId`, `chatConsideredBrand` (delete on clash), `couponProgram.brandId`.
+- Updates canonical `brands.name` via `pickDisplayBrandName` (casing score + spelling frequency).
+- **Deletes** duplicate brand rows (no brand tombstone column).
+
+### `repairProductMergeChains` contract
+
+1. Log `offersOnTombstones` + `multiHopChains` (SQL).
+2. Up to 5 iterations: fix self-refs → flatten chains → break cycles → repoint offers/specs still on tombstones.
+3. `--dry-run` reports would-repoint counts only.
+
+### Merge modes (`mergeMatchedProducts.ts`)
+
+| Flag / env | Purpose |
+|------------|---------|
+| `--mode=clusters` | **Default.** Live edge recompute + union-find + merge |
+| `--mode=candidates` | Legacy: merge rows in `product_match_candidates` where `status != MERGED` |
+| `--dry-run` | Log planned merges only |
+| `--limit-components=N` | Cap cluster components processed (clusters mode) |
+| `--limit-merges=N` / `PRODUCT_DEDUP_MERGE_LIMIT` | Cap product merges executed |
+| `--limit=N` | Legacy alias for `--limit-merges` in candidates mode |
+
+`buildProductMatchCandidates.ts --persist` writes candidates with `matchMethod: blocked_heuristic` and `orderUndirectedPair` (lower id = primary). **Not required** for cluster merge.
+
+### Scrapers rollout scope (shipped)
+
+- **18** catalog upsert paths use `resolveBrandByName`.
+- **18** PDP enrich jobs use `resolveCanonicalProductId` (includes `yesStyle`).
+- `upsertProductFromCosrxUsHit.test.ts` updated for brand resolution behavior.
+
+### Known gaps for follow-up refactor
+
+- `getShoppingProductCardsBatch` — one-hop tombstone only (`src/interactions/catalog/getShoppingProductCardsBatch.ts`).
+- `product_match_candidates.primaryProductId` / `secondaryProductId` naming (architect approval).
+- `pickCanonicalProduct` loads `categoryId` but does not use it in sort.
+- Production DB not deduped yet.
+- `runLlmProductMatching.ts` still on disk; not removed from repo.
+- Phase 1 scripts (`productDedupBaselineReport`, `productDedupEvaluate`, ground-truth fixtures) not built.
+
+---
+
 ## TODO
 
 ### Phase 0 — Brand dedup (first)
@@ -676,7 +819,7 @@ Spot-check of Style Korean-only shade variants (e.g. Cloud Blur Lipstick, Cover 
 - [ ] Phase 2.2 — Per-seller deterministic signal coverage report (GTIN etc. — future use)
 - [ ] Phase 2.3 — Validate union-find model + OY-absent cluster counts
 - [ ] Phase 2.4 — Document optional v2 signals if heuristic precision is low
-- [ ] Phase 2.5 — Dry-run + limit gates documented in runbook
+- [ ] Phase 2.5 — Dry-run + limit gates documented in runbook (see As-built reference § merge modes)
 - [ ] Phase 2 exit — Sign off on rollout strategy
 
 ### Phase 3 — Implementation
@@ -689,5 +832,5 @@ Spot-check of Style Korean-only shade variants (e.g. Cloud Blur Lipstick, Cover 
 - [x] Phase 3 — Merge tombstone chain repair (`flattenProductMergeChains`, `repointProductForeignKeys`, `repairProductMergeChains.ts`, scraper canonical resolution)
 - [ ] Phase 3 — Refactor `executeProductMerge` comments / candidate schema naming (architect approval)
 - [x] Phase 3 — Full-seller rollout verification (local DB: converged dry-run; re-run `mergeMatchedProducts.ts` after new seller ingest)
-- [ ] Phase 3 — Unit/interaction tests for blocking, clusters, merge, evaluate (partial: `executeProductMerge.test.ts` shipped)
+- [ ] Phase 3 — Unit/interaction tests for blocking, clusters, merge, evaluate (partial — see §3.6 shipped matrix)
 - [ ] Deprecate `runLlmProductMatching.ts` and OY-primary conventions in docs/comments
