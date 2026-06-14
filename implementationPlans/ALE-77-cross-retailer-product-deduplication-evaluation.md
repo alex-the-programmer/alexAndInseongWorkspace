@@ -8,7 +8,7 @@ We recently ingested catalog data from many new K-beauty retailers (multi-brand 
 
 **Desired end state:** One canonical `brands` row per real-world brand, then one canonical `products` row per sellable SKU (same product + same size/shade), with one `seller_products` row per retailer listing attached to it. Downstream price comparison (`listSellerOffersForProduct`, `pickLowestPricedSellerOffer`, shopping cards) already assumes this model — it just does not work until duplicates are merged.
 
-**Prerequisite:** **Brand dedup must run before product dedup.** Product matching gates on shared `brandId`; duplicate brand rows (verbatim copies, case-only variants like `COSRX` vs `Cosrx`) split the same real brand into separate buckets and prevent cross-retailer product edges.
+**Prerequisite:** **Brand dedup must run before product dedup** — Phase 0 (v1: case/whitespace) then Phase 0.5 (v2: punctuation/spacing, exact aggressive key only). Product matching gates on shared `brandId`; duplicate brand rows split the same real brand into separate buckets and prevent cross-retailer product edges.
 
 **Branch (when implementing):** `ALE-77-cross-retailer-product-deduplication-evaluation` (`commerce-platform-backend` for merge scripts; `commerce-platform-scrapers` for brand resolution on ingest).
 
@@ -38,9 +38,12 @@ We recently ingested catalog data from many new K-beauty retailers (multi-brand 
 
 ```mermaid
 flowchart TD
-  Z[Phase 0: Brand dedup] --> Z1[Group brands by normalized name]
+  Z[Phase 0: Brand dedup v1] --> Z1[Group by trim/case/whitespace key]
   Z1 --> Z2[Merge into canonical brand row]
-  Z2 --> A[Phase 1+: Product dedup per brand bucket]
+  Z2 --> Z25[Phase 0.5: Aggressive dedup v2]
+  Z25 --> Z3[Group by alphanumeric-only key; exact match only]
+  Z3 --> Z4[Merge punctuation/spacing variants]
+  Z4 --> A[Phase 1+: Product dedup per brand bucket]
   A --> B[Compare all cross-seller product pairs]
   B -->|isBlockedPair| C[Match edges / product_match_candidates]
   C --> D[Union-find connected components]
@@ -115,9 +118,10 @@ Display name, thumbnail, and ingredients for cards already resolve from **specs 
 | Issue | Detail |
 |-------|--------|
 | No uniqueness on `brands.name` | Same logical brand can exist as multiple rows |
-| Scraper lookup is **case-sensitive exact match** | `findFirst({ where: { name: brandName } })` then `create` — e.g. `COSRX` vs `Cosrx` → two rows |
+| Scraper lookup was case-sensitive exact match (pre-Phase 0) | Fixed in Phase 0.3 (v1) + Phase 0.5 (aggressive fallback) via `resolveBrandByName.ts` |
 | Verbatim duplicates | Same string inserted twice (race or re-ingest) — rare but possible without unique index |
-| Product dedup impact | `INTERSECT` on `brandId` treats `COSRX` and `Cosrx` as different brands → **zero overlap**, no product match edges |
+| Punctuation/spacing variants (post-v1) | e.g. `AGE 20's` vs `AGE20'S` — addressed in Phase 0.5 aggressive merge |
+| Product dedup impact | `INTERSECT` on `brandId` treats duplicate brand rows as different brands → **zero overlap**, no product match edges |
 
 Pattern repeated across Shopify upserts (`upsertProductFromPeachAndLilyHit.ts`, `upsertProductFromJolseHit.ts`, etc.).
 
@@ -150,7 +154,11 @@ function normalizeBrandName(name: string): string {
 }
 ```
 
-v1 matches: case differences, leading/trailing whitespace, collapsed internal spaces. **Out of v1:** fuzzy aliases (`Etude` vs `ETUDE HOUSE`), punctuation-only diffs — manual mapping table if needed later.
+v1 matches: case differences, leading/trailing whitespace, collapsed internal spaces.
+
+**Out of v1 (addressed in Phase 0.5):** punctuation and spacing variants (`AGE 20's` vs `AGE20'S`, `AMPLE:N` vs `AMPLE N`, `K-POP` vs `KPOP`).
+
+**Still out of scope:** fuzzy aliases (`Etude` vs `ETUDE HOUSE`), prefix/substring matches (`Alive` vs `ALIVE LAB`), product-line suffixes (`AMUSE` vs `AMUSEDew`) — manual mapping table if needed later.
 
 ### 0.2 Merge duplicate brands
 
@@ -175,21 +183,116 @@ Support `--dry-run` and `--limit`. Skip `Unknown brand` unless explicitly groupe
 Shared helper in `commerce-platform-scrapers` (e.g. `src/db/resolveBrandByName.ts`):
 
 ```ts
-// 1. normalize input
-// 2. findFirst where lower(trim(name)) matches — or brands.normalizedName once column exists
-// 3. create with canonical display name if missing
+// 1. normalize input (v1: trim/collapse/lowercase)
+// 2. findFirst where lower(trim(name)) matches
+// 3. if miss, findFirst where aggressive key matches (Phase 0.5)
+// 4. create with canonical display name if missing
 ```
 
 Replace copy-pasted brand blocks in each `upsertProductFrom*Hit.ts`. **Long-term:** `brands.normalizedName` column + unique index (architect approval) so DB enforces uniqueness.
 
-### 0.4 Phase 0 exit criteria
+### 0.4 Phase 0 exit criteria (v1)
 
 | Criterion | Target |
 |-----------|--------|
 | Zero duplicate groups on `lower(trim(name))` | Except documented manual aliases in a skip list |
-| `brandDedupReport.ts` clean | Re-run after merge |
+| `brandDedupReport.ts` clean (`--mode=v1`) | Re-run after merge |
 | Scraper helper merged | At least one retailer path + pattern documented for rest |
 | Product dedup unblocked | Overlap-brand counts between seller pairs increase vs pre-merge snapshot |
+
+**Local v1 merge (2026-06-13):** 2,213 brands → 1,859 brands (296 groups, 354 duplicate rows deleted).
+
+---
+
+## Phase 0.5 — Aggressive brand dedup (punctuation / spacing variants)
+
+**Goal:** Collapse brands that v1 left separate because punctuation, apostrophes, or internal spacing differed, while **not** merging brands that only share a prefix or product-line suffix.
+
+**When:** Run **after** Phase 0 v1 merge on a clean v1 report (`duplicateGroups=0` under `--mode=v1`).
+
+### 0.5.1 Why v2 was needed
+
+After v1, ad-hoc inspection found pairs like:
+
+| Raw names | v1 key | v2 (aggressive) key | Merge? |
+|-----------|--------|---------------------|--------|
+| `AGE 20's` / `AGE20'S` | different | both `age20s` | yes |
+| `Alternative stereo` / `alternativestereo` | different | both `alternativestereo` | yes |
+| `AMPLE:N` / `AMPLE N` | different | both `amplen` | yes |
+| `K-POP` / `KPOP` | different | both `kpop` | yes |
+| `Dr.Jart+` / `Dr.Jart` | different | both `drjart` | yes |
+| `TONYMOLY` / `TONY MOLY` | different | both `tonymoly` | yes |
+| `Alive` / `ALIVE LAB` | different | `alive` vs `alivelab` | **no** |
+| `AMUSE` / `AMUSEDew` / `AMUSESoft` | different | `amuse`, `amusedew`, `amusesoft` | **no** |
+
+v1 fixed case and whitespace only. v2 catches “same spelling, different punctuation/spacing” without fuzzy matching.
+
+### 0.5.2 Normalization key (v2)
+
+```ts
+/** v2: lowercase letters, digits, and Hangul only */
+function normalizeBrandNameAggressive(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9가-힣]+/g, "");
+}
+```
+
+**Auto-merge rule:** group brands by aggressive key; merge a group **only when** `COUNT > 1` and the aggressive key is **non-empty**. No prefix matching, no edit distance, no “contains” heuristics.
+
+**Canonical pick / FK repoint / delete:** same as Phase 0.2 (`executeBrandMerge.ts`, `pickCanonicalBrand`, `pickDisplayBrandName`).
+
+**Duplicate kind:** `punctuation_spacing` when v1 keys differ but aggressive keys match; otherwise inherit v1 kind (`case_only`, `whitespace`, `verbatim`) for groups that still qualify under both keys.
+
+### 0.5.3 Scripts and flags
+
+| Script | v1 (default) | v2 |
+|--------|--------------|-----|
+| `scripts/brandDedupReport.ts` | `--mode=v1` → `scripts/fixtures/brand-dedup/report.json` | `--mode=v2` → `report-v2.json` |
+| `scripts/mergeDuplicateBrands.ts` | `--mode=v1` | `--mode=v2` |
+
+Both support `--dry-run` and `--limit=N`. Skip `Unknown brand` (same as v1).
+
+**Code locations:**
+
+- `scripts/lib/brandDedup/normalizeBrandName.ts` — `normalizeBrandName` (v1), `normalizeBrandNameAggressive` (v2)
+- `scripts/lib/brandDedup/brandDedupLogic.ts` — `groupDuplicateBrands(brands, mode)`
+- `commerce-platform-scrapers/src/db/resolveBrandByName.ts` — v1 lookup, then v2 aggressive SQL fallback on ingest
+
+**Scraper aggressive lookup (Postgres):**
+
+```sql
+WHERE lower(regexp_replace(name, '[^a-z0-9가-힣]+', '', 'g')) = $aggressiveKey
+```
+
+### 0.5.4 Local merge results (2026-06-13)
+
+Run order: v1 merge (already done) → v2 report → v2 dry-run → v2 live merge → verify.
+
+| Step | Result |
+|------|--------|
+| Pre-v2 brands | 1,859 |
+| v2 duplicate groups | 74 (`punctuation_spacing`) |
+| Brands merged (live) | 78 rows across 74 groups |
+| Post-v2 brands | **1,781** |
+| Post-v2 `brandDedupReport --mode=v2` | **0 duplicate groups** |
+| Post-v2 `brandDedupReport --mode=v1` | **0 duplicate groups** (v2 merge did not reintroduce v1 dupes) |
+
+Example merges: `AGE 20's`+`AGE20'S`, `AMPLE:N`+`AMPLE N`, `SOME BY MI`+`SOMEBYMI`, `Hada Labo`+`HADA LABO`.
+
+### 0.5.5 Phase 0.5 exit criteria
+
+| Criterion | Target |
+|-----------|--------|
+| Zero duplicate groups on aggressive key | `brandDedupReport.ts --mode=v2` |
+| v1 still clean | `brandDedupReport.ts --mode=v1` |
+| Scraper resolves aggressive variants | `resolveBrandByName` v2 fallback + tests |
+| False-merge guardrails | No merge when aggressive keys differ (`Alive`/`ALIVE LAB`, `AMUSE`/`AMUSEDew`) |
+
+### 0.5.6 What we explicitly did not do
+
+- Prefix / substring matching (`alive` ⊂ `alivelab`)
+- Product-line suffix collapsing (`AMUSE` + `AMUSEDew`)
+- Fuzzy alias table (`Etude` vs `ETUDE HOUSE`)
+- DB unique index on aggressive key (still optional `brands.normalizedName` in Phase 0.4)
 
 ---
 
@@ -305,6 +408,25 @@ For **all unordered seller pairs** (and optionally per-brand):
 
 Deliverable: table of top seller pairs by edge volume, total edges, estimated components, OY-absent cluster %.
 
+**Local run (2026-06-13, after brand dedup + OY×SK merge):**
+
+| Metric | Value |
+|--------|-------|
+| Dedup-enabled sellers | 21 |
+| Brand buckets (2+ sellers) | 567 |
+| Estimated heuristic edges | 285,358 |
+| Multi-product components (union-find) | 658 |
+| Products that would become tombstones | ~24,446 |
+| Components with 3+ sellers | 284 |
+| 3+ seller components without OY Global | 39 (13.7%) |
+
+Top edge volume: OY Global × OY US (35k), Tester Korea × Skinglow Haven (31k), OY Global × Moida (22k).
+
+Script: `npx dotenv-cli -e .env -e .env.local -- tsx scripts/productDedupPairwiseCostEstimate.ts`  
+Output: `scripts/fixtures/product-dedup/pairwise-cost-estimate.json`
+
+Supporting modules: `scripts/lib/productDedup/productDedupConfig.ts` (all sellers with listings), `estimatePairwiseEdges.ts`, `productDedupClusters.ts` (union-find).
+
 ### 2.2 Blocking signal inventory
 
 Per retailer, catalog which **deterministic** match keys exist in `product_seller_specs`:
@@ -404,7 +526,7 @@ Order of merges within a component: merge into root incrementally; re-resolve ro
 
 **Single full pass** over all configured sellers (not phased by OY hub) — **after Phase 0 brand merge**:
 
-1. Re-run `brandDedupReport.ts` (must be clean)
+1. Re-run `brandDedupReport.ts` (v1 and v2 must be clean)
 2. Dry-run cluster report: component sizes, OY-absent clusters, sample names
 3. `buildProductMatchCandidates` (all sellers)
 4. `mergeMatchedProducts` with `--dry-run`, then live
@@ -426,6 +548,7 @@ After each rollout batch:
 |------|------|
 | `executeBrandMerge.test.ts` | Interaction — repoints `products.brandId`, handles chat/coupon clashes, deletes duplicate brand |
 | `normalizeBrandName.test.ts` | Unit — case, whitespace, v1 edge cases |
+| `normalizeBrandNameAggressive.test.ts` | Unit — punctuation/spacing; guardrails for prefix/suffix brands |
 | `productDedupBlocking.test.ts` | Unit — token overlap edge cases |
 | `productDedupClusters.test.ts` | Unit — union-find, transitive A-B-C, canonical root tie-breakers, OY-absent cluster |
 | `executeProductMerge.test.ts` | Interaction — merge moves `seller_products`, tombstone, no duplicate seller clash |
@@ -446,7 +569,7 @@ After each rollout batch:
 
 | Risk | Mitigation |
 |------|------------|
-| Brand duplicates split product matching | **Phase 0** brand merge + case-insensitive ingest; optional `brands.normalizedName` unique |
+| Brand duplicates split product matching | **Phase 0** v1 merge + **Phase 0.5** aggressive merge + case-insensitive + aggressive ingest lookup; optional `brands.normalizedName` unique |
 | False merge combines different sizes/shades | Phase 1 ground-truth precision; tune `MIN_TOKEN_OVERLAP`; optional volume parsing in v2 |
 | Heuristic too loose (similar titles, different variants) | Manual spot-checks per rollout batch; stricter overlap threshold per seller pair |
 | Wrong canonical root (suboptimal name/category on survivor) | Root picker tie-breakers; ALE-76 spec resolution picks best thumbnail/ingredients per offering |
@@ -460,11 +583,20 @@ After each rollout batch:
 
 ### Phase 0 — Brand dedup (first)
 
-- [ ] Phase 0.1 — `brandDedupReport.ts` + first snapshot
-- [ ] Phase 0.2 — `mergeDuplicateBrands.ts` + `executeBrandMerge.ts` (dry-run, then live)
-- [ ] Phase 0.3 — `resolveBrandByName.ts` in scrapers; roll out to upsert paths
+- [x] Phase 0.1 — `brandDedupReport.ts` + first snapshot
+- [x] Phase 0.2 — `mergeDuplicateBrands.ts` + `executeBrandMerge.ts` (dry-run, then live)
+- [x] Phase 0.3 — `resolveBrandByName.ts` in scrapers; roll out to upsert paths
 - [ ] Phase 0.4 — Optional migration: `brands.normalizedName` unique (architect approval)
-- [ ] Phase 0 exit — Zero case/whitespace duplicate groups; overlap-brand counts improved
+- [x] Phase 0 exit (v1) — Zero case/whitespace duplicate groups (local: 2,213 → 1,859 brands)
+
+### Phase 0.5 — Aggressive brand dedup
+
+- [x] Phase 0.5.1 — `normalizeBrandNameAggressive` + `groupDuplicateBrands(..., "v2")`
+- [x] Phase 0.5.2 — `brandDedupReport.ts --mode=v2` + `report-v2.json` snapshot
+- [x] Phase 0.5.3 — `mergeDuplicateBrands.ts --mode=v2` (dry-run, then live; local: 74 groups, 78 brands merged)
+- [x] Phase 0.5.4 — Scraper `resolveBrandByName` aggressive fallback + unit tests
+- [x] Phase 0.5 exit — Zero aggressive-key duplicate groups (local: 1,859 → 1,781 brands); v1 report still clean
+- [ ] Overlap-brand counts improved vs pre-merge snapshot (verify in Phase 1 baseline)
 
 ### Phase 1 — Product dedup evaluation
 
@@ -477,7 +609,7 @@ After each rollout batch:
 
 ### Phase 2 — Multi-retailer gap analysis
 
-- [ ] Phase 2.1 — Pairwise candidate volume estimate across all sellers
+- [x] Phase 2.1 — `productDedupPairwiseCostEstimate.ts` + snapshot (local pre-merge: 21 sellers, 285,358 edges, 658 components, 39 OY-absent 3+ seller clusters; post-merge: 0 edges / 0 components)
 - [ ] Phase 2.2 — Per-seller deterministic signal coverage report (GTIN etc. — future use)
 - [ ] Phase 2.3 — Validate union-find model + OY-absent cluster counts
 - [ ] Phase 2.4 — Document optional v2 signals if heuristic precision is low
@@ -486,10 +618,12 @@ After each rollout batch:
 
 ### Phase 3 — Implementation
 
-- [ ] Phase 3 — Multi-retailer candidate builder (all seller pairs per brand, unordered pairs)
-- [ ] Phase 3 — `productDedupClusters.ts` union-find + canonical root picker
-- [ ] Phase 3 — Refactor `executeProductMerge` / `mergeMatchedProducts` to use cluster root (not OY primary)
-- [ ] Phase 3 — Schema cleanup for `product_match_candidates` primary/secondary naming (architect approval)
-- [ ] Phase 3 — Full-seller rollout + incremental new-seller reruns
+- [x] Phase 3.1 — `productDedupConfig.ts` (all sellers with listings)
+- [x] Phase 3.2 — Multi-seller `buildProductMatchCandidates.ts` (all pairs; `--persist` optional)
+- [x] Phase 3.3 — `productDedupClusters.ts` + `productDedupLogic.ts` + `mergeProductDedupClusters.ts`
+- [x] Phase 3.4 — `mergeMatchedProducts.ts --mode=clusters` (union-find + canonical root picker)
+- [x] Phase 3.4 — Full-seller live merge complete (local: iterative passes converged — **~25,870** product tombstones total; **17,197** active products, **1,032** multi-seller active; two consecutive dry-runs show 0 remaining merges)
+- [ ] Phase 3 — Refactor `executeProductMerge` comments / candidate schema naming (architect approval)
+- [x] Phase 3 — Full-seller rollout verification (local DB: converged dry-run; re-run `mergeMatchedProducts.ts` after new seller ingest)
 - [ ] Phase 3 — Unit/interaction tests for blocking, clusters, merge, evaluate
 - [ ] Deprecate `runLlmProductMatching.ts` and OY-primary conventions in docs/comments
