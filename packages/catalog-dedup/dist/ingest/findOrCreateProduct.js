@@ -1,9 +1,11 @@
 import { isUnknownBrandName } from "../core/brandNormalize.js";
 import { readProductDedupConfig } from "../core/config.js";
 import { isBlockedPair } from "../core/productNameBlocking.js";
+import { normalizeProductTitle } from "../core/productNameNormalize.js";
 import { resolveActiveProduct } from "./resolveActiveProduct.js";
 export async function findOrCreateProduct(prisma, params) {
     const { brandId, brandName, sellerId, name, retailerSku, categoryId } = params;
+    const cleanName = normalizeProductTitle(name, brandName);
     const sku = retailerSku.trim();
     if (!sku) {
         throw new Error("findOrCreateProduct requires a non-empty retailerSku");
@@ -50,14 +52,14 @@ export async function findOrCreateProduct(prisma, params) {
             orderBy: { id: "asc" },
         });
         for (const candidate of candidates) {
-            if (isBlockedPair(name, candidate.name, minTokenOverlap)) {
+            if (isBlockedPair(cleanName, candidate.name, minTokenOverlap, { brandA: brandName, brandB: brandName })) {
                 return candidate;
             }
         }
     }
     return prisma.product.create({
         data: {
-            name,
+            name: cleanName,
             brandId,
             categoryId,
         },

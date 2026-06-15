@@ -49,6 +49,7 @@ export async function mergeProductDedupClusters(
     const { edges } = estimatePairwiseEdgesForBrand({
       products: bucket.products,
       sellerNamesById: new Map(),
+      brandName: bucket.brandName,
       minOverlap: config.minTokenOverlap,
       maxCounterpartsPerProduct: config.maxCounterpartsPerProduct,
     });

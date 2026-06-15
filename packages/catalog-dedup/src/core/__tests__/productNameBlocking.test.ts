@@ -73,4 +73,26 @@ describe("isBlockedPair", () => {
   it("returns false when overlap is below threshold and names are short", () => {
     expect(isBlockedPair("ABC", "XYZ", 2)).toBe(false);
   });
+
+  it("matches promo-prefixed names to base titles when brand is provided", () => {
+    expect(
+      isBlockedPair(
+        "[BOGO] COSRX Pure Fit Cica Cream 50ml",
+        "COSRX Pure Fit Cica Cream 50ml",
+        2,
+        { brandA: "COSRX", brandB: "COSRX" }
+      )
+    ).toBe(true);
+  });
+
+  it("matches brand-redundant titles after normalization", () => {
+    expect(
+      isBlockedPair(
+        "COSRX Advanced Snail 96 Mucin Power Essence 100ml",
+        "Advanced Snail 96 Mucin Power Essence 100ml",
+        2,
+        { brandA: "COSRX", brandB: "COSRX" }
+      )
+    ).toBe(true);
+  });
 });

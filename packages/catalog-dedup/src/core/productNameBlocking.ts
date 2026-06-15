@@ -1,3 +1,23 @@
+import { normalizeProductNameForDedup } from "./productNameNormalize.js";
+
+export type BlockedPairOptions = {
+  brandA?: string;
+  brandB?: string;
+};
+
+function namesForBlocking(
+  nameA: string,
+  nameB: string,
+  options?: BlockedPairOptions
+): { a: string; b: string } {
+  const brandA = options?.brandA ?? "";
+  const brandB = options?.brandB ?? "";
+  return {
+    a: normalizeProductNameForDedup(nameA, brandA),
+    b: normalizeProductNameForDedup(nameB, brandB),
+  };
+}
+
 /** Alphanumeric tokens of length >= 3 for loose name blocking (same brand). */
 export function significantTokens(name: string): Set<string> {
   const raw = name.toLowerCase().match(/[a-z0-9\uac00-\ud7af]{3,}/g) ?? [];
@@ -27,11 +47,16 @@ export function tokenOverlapCount(a: string, b: string): number {
   return n;
 }
 
-export function isBlockedPair(skName: string, oyName: string, minOverlap: number): boolean {
-  if (tokenOverlapCount(skName, oyName) >= minOverlap) return true;
-  const s = skName.toLowerCase().replace(/\s+/g, " ").trim();
-  const o = oyName.toLowerCase().replace(/\s+/g, " ").trim();
-  if (s.length >= 12 && o.length >= 12 && (s.includes(o.slice(0, 12)) || o.includes(s.slice(0, 12)))) {
+export function isBlockedPair(
+  nameA: string,
+  nameB: string,
+  minOverlap: number,
+  options?: BlockedPairOptions
+): boolean {
+  const { a, b } = namesForBlocking(nameA, nameB, options);
+  if (a === b) return true;
+  if (tokenOverlapCount(a, b) >= minOverlap) return true;
+  if (a.length >= 12 && b.length >= 12 && (a.includes(b.slice(0, 12)) || b.includes(a.slice(0, 12)))) {
     return true;
   }
   return false;
