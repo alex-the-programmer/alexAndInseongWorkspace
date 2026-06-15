@@ -23,6 +23,7 @@ export async function mergeProductDedupClusters(prisma, options) {
         const { edges } = estimatePairwiseEdgesForBrand({
             products: bucket.products,
             sellerNamesById: new Map(),
+            brandName: bucket.brandName,
             minOverlap: config.minTokenOverlap,
             maxCounterpartsPerProduct: config.maxCounterpartsPerProduct,
         });

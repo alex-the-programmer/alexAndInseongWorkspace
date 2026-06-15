@@ -1,4 +1,5 @@
 export * from "./brandNormalize.js";
+export * from "./productNameNormalize.js";
 export * from "./productNameBlocking.js";
 export * from "./config.js";
 export * from "./types.js";

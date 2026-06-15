@@ -32,6 +32,7 @@ export type PairwiseEstimateResult = {
 export declare function estimatePairwiseEdgesForBrand(params: {
     products: DedupProduct[];
     sellerNamesById: Map<string, string>;
+    brandName?: string;
     minOverlap: number;
     maxCounterpartsPerProduct: number;
 }): {

@@ -177,4 +177,67 @@ describe("findOrCreateProduct", () => {
     expect(product.id).toBe(500n);
     expect(findManyCalled).toBe(false);
   });
+
+  it("reuses a match when incoming title has a promo prefix", async () => {
+    const match = {
+      id: 600n,
+      name: "Pure Fit Cica Cream 50ml",
+      brandId: 1n,
+      categoryId: 5n,
+      sku: "other-sku",
+      mergedIntoProductId: null,
+    };
+
+    const prisma = {
+      sellerProduct: {
+        findFirst: async () => null,
+      },
+      product: {
+        findFirst: async () => null,
+        findMany: async () => [match],
+        create: async () => {
+          throw new Error("should not create when promo-prefixed name matches");
+        },
+        findUnique: async () => null,
+      },
+    } as unknown as CatalogDedupIngestPrisma;
+
+    const product = await findOrCreateProduct(prisma, {
+      ...baseParams,
+      name: "[BOGO] COSRX Pure Fit Cica Cream 50ml",
+    });
+    expect(product.id).toBe(600n);
+  });
+
+  it("stores a cleaned name when creating a product", async () => {
+    const created = {
+      id: 700n,
+      name: "Pure Fit Cica Cream 50ml",
+      brandId: 1n,
+      categoryId: 5n,
+      sku: null,
+      mergedIntoProductId: null,
+    };
+
+    const prisma = {
+      sellerProduct: {
+        findFirst: async () => null,
+      },
+      product: {
+        findFirst: async () => null,
+        findMany: async () => [],
+        create: async (args: { data: { name: string; brandId: bigint; categoryId: bigint } }) => {
+          expect(args.data.name).toBe("Pure Fit Cica Cream 50ml");
+          return created;
+        },
+        findUnique: async () => null,
+      },
+    } as unknown as CatalogDedupIngestPrisma;
+
+    const product = await findOrCreateProduct(prisma, {
+      ...baseParams,
+      name: "COSRX Pure Fit Cica Cream 50ml",
+    });
+    expect(product.id).toBe(700n);
+  });
 });

@@ -67,10 +67,11 @@ function sellerIdsInComponent(
 export function estimatePairwiseEdgesForBrand(params: {
   products: DedupProduct[];
   sellerNamesById: Map<string, string>;
+  brandName?: string;
   minOverlap: number;
   maxCounterpartsPerProduct: number;
 }): { edges: Array<[bigint, bigint]>; pairEdgeCounts: Map<string, number> } {
-  const { products, minOverlap, maxCounterpartsPerProduct } = params;
+  const { products, minOverlap, maxCounterpartsPerProduct, brandName = "" } = params;
   const bySeller = productsBySeller(products);
   const sellerIds = [...bySeller.keys()].map((id) => BigInt(id));
   const edges: Array<[bigint, bigint]> = [];
@@ -92,7 +93,10 @@ export function estimatePairwiseEdgesForBrand(params: {
           .filter(
             (productB) =>
               productB.id !== productA.id &&
-              isBlockedPair(productA.name, productB.name, minOverlap)
+              isBlockedPair(productA.name, productB.name, minOverlap, {
+                brandA: brandName,
+                brandB: brandName,
+              })
           )
           .slice(0, maxCounterpartsPerProduct);
 
@@ -144,6 +148,7 @@ export function estimatePairwiseEdges(params: {
     const { edges, pairEdgeCounts } = estimatePairwiseEdgesForBrand({
       products: bucket.products,
       sellerNamesById,
+      brandName: bucket.brandName,
       minOverlap,
       maxCounterpartsPerProduct,
     });
