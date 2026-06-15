@@ -948,8 +948,8 @@ They share tokenization **ideas** (lowercase, alphanumeric/Hangul, stop words) b
 - [x] Scrapers depend on package; `resolveBrandByName` → `findOrCreateBrand` re-export
 
 ### Phase 2 — `findOrCreateBrand`
-- [ ] Rename/move `resolveBrandByName` → `findOrCreateBrand` in shared module
-- [ ] Audit all upsert paths use it
+- [x] Rename/move `resolveBrandByName` → `findOrCreateBrand` in shared module
+- [x] Audit all upsert paths use it (19 upsert files + 3 enrich jobs; fixed Tester Korea + Style Korean enrich)
 - [ ] (Optional) `brands.normalizedName` migration — architect approval
 
 ### Phase 3 — `findOrCreateProduct` + `findOrCreateSellerProduct`
