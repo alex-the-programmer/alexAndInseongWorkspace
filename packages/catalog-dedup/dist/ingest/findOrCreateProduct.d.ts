@@ -1,11 +1,11 @@
-import type { CatalogDedupIngestPrisma } from "../types/prisma.js";
-/** Phase 3 — cross-seller product matching at ingest. */
+import type { CatalogDedupIngestPrisma, CatalogDedupProduct } from "../types/prisma.js";
 export type FindOrCreateProductParams = {
     brandId: bigint;
+    brandName: string;
     sellerId: bigint;
     name: string;
     retailerSku: string;
     categoryId: bigint;
 };
-export declare function findOrCreateProduct(_prisma: CatalogDedupIngestPrisma, _params: FindOrCreateProductParams): Promise<never>;
+export declare function findOrCreateProduct(prisma: CatalogDedupIngestPrisma, params: FindOrCreateProductParams): Promise<CatalogDedupProduct>;
 //# sourceMappingURL=findOrCreateProduct.d.ts.map

@@ -1,6 +1,6 @@
-import type { CatalogDedupIngestPrisma } from "../types/prisma.js";
+import type { CatalogDedupIngestPrisma, CatalogDedupSellerProduct } from "../types/prisma.js";
+import { isUniqueConstraintError } from "./isUniqueConstraintError.js";
 
-/** Phase 3 — stable listing identity via (sellerId, retailerSku). */
 export type FindOrCreateSellerProductParams = {
   sellerId: bigint;
   productId: bigint;
@@ -8,8 +8,34 @@ export type FindOrCreateSellerProductParams = {
 };
 
 export async function findOrCreateSellerProduct(
-  _prisma: CatalogDedupIngestPrisma,
-  _params: FindOrCreateSellerProductParams
-): Promise<never> {
-  throw new Error("findOrCreateSellerProduct is not implemented until ALE-78 Phase 3");
+  prisma: CatalogDedupIngestPrisma,
+  params: FindOrCreateSellerProductParams
+): Promise<CatalogDedupSellerProduct> {
+  const { sellerId, productId, retailerSku } = params;
+  const sku = retailerSku.trim();
+  if (!sku) {
+    throw new Error("findOrCreateSellerProduct requires a non-empty retailerSku");
+  }
+
+  const existing = await prisma.sellerProduct.findFirst({
+    where: { sellerId, retailerSku: sku },
+  });
+  if (existing) return existing;
+
+  try {
+    return await prisma.sellerProduct.upsert({
+      where: {
+        sellerId_productId: { sellerId, productId },
+      },
+      create: { sellerId, productId, retailerSku: sku },
+      update: { retailerSku: sku },
+    });
+  } catch (e) {
+    if (!isUniqueConstraintError(e)) throw e;
+    const retry = await prisma.sellerProduct.findFirst({
+      where: { sellerId, retailerSku: sku },
+    });
+    if (retry) return retry;
+    throw e;
+  }
 }

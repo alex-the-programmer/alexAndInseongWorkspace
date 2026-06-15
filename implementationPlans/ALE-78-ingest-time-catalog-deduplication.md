@@ -954,11 +954,11 @@ They share tokenization **ideas** (lowercase, alphanumeric/Hangul, stop words) b
 
 ### Phase 3 — `findOrCreateProduct` + `findOrCreateSellerProduct`
 - [ ] Migration: `seller_products.retailerSku` + `@@unique([sellerId, retailerSku])` — architect approval
-- [ ] Implement `findOrCreateProduct` — **no `products.sku` on create**; lookup via `seller_products` first
-- [ ] Implement `findOrCreateSellerProduct`
-- [ ] Fix `getShoppingProductCardsBatch` (and similar) to use `sellerProduct.retailerSku` for URLs
+- [x] Implement `findOrCreateProduct` — **no `products.sku` on create**; lookup via `seller_products` first
+- [x] Implement `findOrCreateSellerProduct`
+- [x] Fix `getShoppingProductCardsBatch` (and similar) to use `sellerProduct.retailerSku` for URLs
 - [ ] Performance spike + index decision
-- [ ] Roll out to all `upsertProductFrom*Hit.ts` — remove `findFirst({ sku })` / `sku:` on product create
+- [x] Roll out to all `upsertProductFrom*Hit.ts` — remove `findFirst({ sku })` / `sku:` on product create
 - [ ] Integration tests: cross-seller match, same-seller exclusion, **re-ingest idempotency**
 - [ ] Migration: drop `products.sku` — architect approval (after backfill)
 
