@@ -215,10 +215,15 @@ For **bulk dedup** on existing rows without seller context per product: use cano
 ### Phase 3 — Bulk title cleanup + dedup merge
 
 - [x] `cleanup-product-titles.ts` with dry-run / `--apply`
-- [ ] `audit-product-title-clusters.ts` + fixtures under `fixtures/product-title-dedup/`
-- [ ] Wire merge through existing `bulkMergeProducts`
-- [ ] Phase 3: dry-run on local DB; record before/after product counts and title-change counts in plan TODO
+- [x] `audit-product-title-clusters.ts` + fixtures under `fixtures/product-title-dedup/`
+- [x] Merge via existing `scripts/catalog-dedup/merge-products.ts` (uses normalized `isBlockedPair`)
+- [x] Dry-run on local DB; record before/after product counts and title-change counts in plan TODO
   - Dry-run `cleanup-product-titles.ts` (2026-06-14): **16,790** scanned, **7,082** would change
+  - `--apply` on local DB: **7,082** titles updated
+  - `audit-product-title-clusters.ts` after apply: **232** clusters, **809** mergeable rows
+  - `merge-products.ts --dry-run` after apply: **14** components, **120** products would merge (clusters mode, full bucket scan)
+  - `merge-products.ts` applied on local DB: **120** products merged across **14** components
+  - Post-merge audit: **16,670** active products, **219** clusters, **691** mergeable rows remain
 
 ### Phase 4 — Documentation
 
@@ -256,7 +261,7 @@ For **bulk dedup** on existing rows without seller context per product: use cano
 
 - [x] Phase 1: `productNameNormalize.ts` + unit tests (promo + brand strip)
 - [x] Phase 2: wire into `upsertCatalogListing` + `isBlockedPair` + `findOrCreateProduct`
-- [ ] Phase 3: bulk title backfill (`cleanup-product-titles.ts`) + audit + dry-run merge on local DB
-- [ ] Phase 3: measure merge count and title rewrite count
+- [x] Phase 3: bulk title backfill (`cleanup-product-titles.ts` --apply) + merge dry-run on local DB
+- [x] Phase 3: measure merge count and title rewrite count
 - [ ] Phase 4: document runbook for BOGO brand-bucket edge cases
 - [ ] Create follow-up Linear ticket for quantity/size normalization
