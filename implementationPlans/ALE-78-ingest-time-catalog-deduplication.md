@@ -960,6 +960,7 @@ They share tokenization **ideas** (lowercase, alphanumeric/Hangul, stop words) b
 - [ ] Performance spike + index decision
 - [x] Roll out to all `upsertProductFrom*Hit.ts` — remove `findFirst({ sku })` / `sku:` on product create
 - [x] Integration tests: cross-seller match, same-seller exclusion, **re-ingest idempotency**
+- [x] Step 3 validation (local): Jolse + Medicube US + COSRX US ingest idempotency; `audit-products` unchanged at 1,570 edges (21 sellers)
 - [ ] Migration: drop `products.sku` — architect approval (after backfill)
 
 ### Phase 4 — One-time legacy backfill
