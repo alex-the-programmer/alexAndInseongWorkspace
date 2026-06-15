@@ -1,0 +1,46 @@
+{
+  "name": "@commerce-platform/catalog-dedup",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared catalog deduplication: core matching, ingest findOrCreate*, bulk audit/merge",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js"
+    },
+    "./ingest": {
+      "types": "./dist/ingest/index.d.ts",
+      "import": "./dist/ingest/index.js"
+    },
+    "./bulk": {
+      "types": "./dist/bulk/index.d.ts",
+      "import": "./dist/bulk/index.js"
+    }
+  },
+  "scripts": {
+    "sync:prisma": "rm -rf node_modules/@prisma node_modules/.prisma && cp -R ../../commerce-platform-backend/node_modules/@prisma ../../commerce-platform-backend/node_modules/.prisma node_modules/",
+    "build": "npm run db:generate --prefix ../../commerce-platform-backend && npm run sync:prisma && tsc",
+    "lint": "npm run db:generate --prefix ../../commerce-platform-backend && npm run sync:prisma && tsc --noEmit",
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config jest.config.cjs",
+    "test:coverage": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config jest.config.cjs --coverage"
+  },
+  "peerDependencies": {
+    "@prisma/client": "^6.0.0"
+  },
+  "devDependencies": {
+    "@prisma/client": "^6.0.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.0.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.4.9",
+    "typescript": "^5.6.0",
+    "prisma": "^6.0.0"
+  }
+}
