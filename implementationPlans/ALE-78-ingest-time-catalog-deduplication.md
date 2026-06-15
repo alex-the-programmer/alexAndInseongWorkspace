@@ -953,18 +953,18 @@ They share tokenization **ideas** (lowercase, alphanumeric/Hangul, stop words) b
 - [ ] (Optional) `brands.normalizedName` migration — architect approval
 
 ### Phase 3 — `findOrCreateProduct` + `findOrCreateSellerProduct`
-- [ ] Migration: `seller_products.retailerSku` + `@@unique([sellerId, retailerSku])` — architect approval
+- [x] Migration: `seller_products.retailerSku` + `@@unique([sellerId, retailerSku])` — architect approved 2026-06-14
 - [x] Implement `findOrCreateProduct` — **no `products.sku` on create**; lookup via `seller_products` first
 - [x] Implement `findOrCreateSellerProduct`
 - [x] Fix `getShoppingProductCardsBatch` (and similar) to use `sellerProduct.retailerSku` for URLs
 - [ ] Performance spike + index decision
 - [x] Roll out to all `upsertProductFrom*Hit.ts` — remove `findFirst({ sku })` / `sku:` on product create
-- [ ] Integration tests: cross-seller match, same-seller exclusion, **re-ingest idempotency**
+- [x] Integration tests: cross-seller match, same-seller exclusion, **re-ingest idempotency**
 - [ ] Migration: drop `products.sku` — architect approval (after backfill)
 
 ### Phase 4 — One-time legacy backfill
 - [ ] Run brand + product bulk merges on production (last tombstone-era pass if needed)
-- [ ] Backfill `seller_products.retailerSku` from legacy `products.sku`
+- [x] Backfill `seller_products.retailerSku` from legacy `products.sku` (local dev: 22,499 rows)
 - [ ] Hard-delete all tombstone product rows; verify zero `mergedIntoProductId`
 
 ### Phase 5 — Remove tombstones; keep bulk CLIs
