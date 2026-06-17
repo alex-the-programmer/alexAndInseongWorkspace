@@ -211,4 +211,50 @@ describe("ingest integration (in-memory Prisma)", () => {
     expect(state.sellerProducts).toHaveLength(2);
     expect(state.sellerProducts.every((sp) => sp.productId === productA.id)).toBe(true);
   });
+
+  it("re-scrape is idempotent for same-seller pack-size variants", async () => {
+    const { prisma, snapshot } = createInMemoryIngestPrisma();
+    const base = "Freshly Juiced Vitamin E Mask";
+    const listings = [
+      { sku: "klairs-15g", name: `Dear, Klairs ${base} 15g`, packAmount: 15, packUnit: "G" as const },
+      { sku: "klairs-90g", name: `Dear, Klairs ${base} 90g`, packAmount: 90, packUnit: "G" as const },
+    ];
+
+    const ingestOnce = async () => {
+      const productIds: bigint[] = [];
+      const sellerProductIds: bigint[] = [];
+      for (const listing of listings) {
+        const product = await findOrCreateProduct(prisma, {
+          brandId,
+          brandName: "Dear, Klairs",
+          sellerId: 77n,
+          name: listing.name,
+          retailerSku: listing.sku,
+          categoryId,
+        });
+        const sellerProduct = await findOrCreateSellerProduct(prisma, {
+          sellerId: 77n,
+          productId: product.id,
+          retailerSku: listing.sku,
+          packAmount: listing.packAmount,
+          packUnit: listing.packUnit,
+          packCount: 1,
+        });
+        productIds.push(product.id);
+        sellerProductIds.push(sellerProduct.id);
+      }
+      return { productIds, sellerProductIds };
+    };
+
+    const first = await ingestOnce();
+    const second = await ingestOnce();
+
+    expect(second.productIds[0]).toBe(first.productIds[0]);
+    expect(second.productIds[1]).toBe(first.productIds[0]);
+    expect(second.sellerProductIds).toEqual(first.sellerProductIds);
+
+    const state = snapshot();
+    expect(state.products).toHaveLength(1);
+    expect(state.sellerProducts).toHaveLength(2);
+  });
 });

@@ -355,7 +355,7 @@ Shopping agent still emits `productId` (canonical line). Server resolves default
 
 - [x] Deploy migration; run `backfill-seller-product-pack-size.ts` + `cleanup-product-base-names.ts`
 - [x] Run `merge-pack-size-clusters.ts` on local DB (post-cleanup: 5 clusters, 9 products merged; pre-cleanup audit was 165/179)
-- [ ] Confirm re-scrape idempotency for multi-size same seller
+- [x] Confirm re-scrape idempotency for multi-size same seller
 
 ### Phase 4 — API + frontend
 
