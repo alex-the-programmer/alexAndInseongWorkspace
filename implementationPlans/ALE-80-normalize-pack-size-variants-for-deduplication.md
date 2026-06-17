@@ -223,6 +223,8 @@ Scripts under `commerce-platform-backend/scripts/catalog-dedup/` (or extend exis
 
 Run audit on local DB before apply; record counts in this plan's TODO.
 
+**Operational runbook (staging/prod, new retailers):** [`commerce-platform-backend/scripts/catalog-dedup/README.md`](../commerce-platform-backend/scripts/catalog-dedup/README.md) § Pack-size audit runbook.
+
 ---
 
 ## API + shopping cards
@@ -359,14 +361,14 @@ Shopping agent still emits `productId` (canonical line). Server resolves default
 
 ### Phase 4 — API + frontend
 
-- [ ] GraphQL schema + `getShoppingProductCardsBatch` variants
-- [ ] `npm run codegen` in backend + frontend
-- [ ] Product card dropdown UX + tests
+- [x] GraphQL schema + `getShoppingProductCardsBatch` variants
+- [x] `npm run codegen` in backend + frontend
+- [x] Product card dropdown UX + tests
 
 ### Phase 5 — Documentation
 
-- [ ] Update ALE-77/78 docs cross-links
-- [ ] Runbook for pack-size audit after new retailers
+- [x] Update ALE-77/78 docs cross-links
+- [x] Runbook for pack-size audit after new retailers → [`commerce-platform-backend/scripts/catalog-dedup/README.md`](../commerce-platform-backend/scripts/catalog-dedup/README.md)
 
 ---
 
@@ -377,5 +379,5 @@ Shopping agent still emits `productId` (canonical line). Server resolves default
 - [x] Phase 1: wire into ingest + blocking
 - [x] Phase 2: migration written + applied locally (staging/prod pending architect approval)
 - [x] Phase 3: bulk backfill + merge executed locally; catalog-dedup/scrapers/backend builds + 86 tests pass
-- [ ] Phase 4: shopping card variant dropdown shipped
-- [ ] Phase 5: docs/runbook updated
+- [x] Phase 4: shopping card variant dropdown shipped
+- [x] Phase 5: docs/runbook updated
