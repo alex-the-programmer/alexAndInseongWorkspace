@@ -1,7 +1,7 @@
 import { isUnknownBrandName } from "../core/brandNormalize.js";
 import { readProductDedupConfig } from "../core/config.js";
 import { isBlockedPair } from "../core/productNameBlocking.js";
-import { normalizeProductTitle } from "../core/productNameNormalize.js";
+import { canonicalProductBaseName } from "../core/productNameNormalize.js";
 import type { CatalogDedupIngestPrisma, CatalogDedupProduct } from "../types/prisma.js";
 import { resolveActiveProduct } from "./resolveActiveProduct.js";
 
@@ -19,7 +19,7 @@ export async function findOrCreateProduct(
   params: FindOrCreateProductParams
 ): Promise<CatalogDedupProduct> {
   const { brandId, brandName, sellerId, name, retailerSku, categoryId } = params;
-  const cleanName = normalizeProductTitle(name, brandName);
+  const baseName = canonicalProductBaseName(name, brandName);
   const sku = retailerSku.trim();
   if (!sku) {
     throw new Error("findOrCreateProduct requires a non-empty retailerSku");
@@ -45,8 +45,34 @@ export async function findOrCreateProduct(
     }
   }
 
-  if (!isUnknownBrandName(brandName)) {
+  if (!isUnknownBrandName(brandName) && baseName.trim()) {
     const { minTokenOverlap, maxCounterpartsPerProduct } = readProductDedupConfig();
+    const normalizedBase = baseName.toLowerCase();
+
+    const exactCandidates = await prisma.product.findMany({
+      where: {
+        brandId,
+        mergedIntoProductId: null,
+        sellerProducts: { some: {} },
+      },
+      select: {
+        id: true,
+        name: true,
+        brandId: true,
+        categoryId: true,
+        sku: true,
+        mergedIntoProductId: true,
+      },
+      take: maxCounterpartsPerProduct,
+      orderBy: { id: "asc" },
+    });
+
+    for (const candidate of exactCandidates) {
+      if (canonicalProductBaseName(candidate.name, brandName).toLowerCase() === normalizedBase) {
+        return candidate;
+      }
+    }
+
     const candidates = await prisma.product.findMany({
       where: {
         brandId,
@@ -70,7 +96,7 @@ export async function findOrCreateProduct(
     });
 
     for (const candidate of candidates) {
-      if (isBlockedPair(cleanName, candidate.name, minTokenOverlap, { brandA: brandName, brandB: brandName })) {
+      if (isBlockedPair(baseName, candidate.name, minTokenOverlap, { brandA: brandName, brandB: brandName })) {
         return candidate;
       }
     }
@@ -78,7 +104,7 @@ export async function findOrCreateProduct(
 
   return prisma.product.create({
     data: {
-      name: cleanName,
+      name: baseName,
       brandId,
       categoryId,
     },

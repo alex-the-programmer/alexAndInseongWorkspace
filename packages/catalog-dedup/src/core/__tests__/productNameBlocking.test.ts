@@ -95,4 +95,15 @@ describe("isBlockedPair", () => {
       )
     ).toBe(true);
   });
+
+  it("matches titles that differ only by trailing pack size", () => {
+    expect(
+      isBlockedPair(
+        "Dear, Klairs Freshly Juiced Vitamin E Mask 15g",
+        "Dear, Klairs Freshly Juiced Vitamin E Mask 90g",
+        2,
+        { brandA: "Dear, Klairs", brandB: "Dear, Klairs" }
+      )
+    ).toBe(true);
+  });
 });

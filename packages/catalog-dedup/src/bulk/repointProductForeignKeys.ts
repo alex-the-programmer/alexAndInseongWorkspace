@@ -95,7 +95,13 @@ export default async function repointProductForeignKeys(
   for (const sp of sellerRows) {
     const clash = await tx.sellerProduct.findUnique({
       where: {
-        sellerId_productId: { sellerId: sp.sellerId, productId: toProductId },
+        sellerId_productId_packAmount_packUnit_packCount: {
+          sellerId: sp.sellerId,
+          productId: toProductId,
+          packAmount: sp.packAmount,
+          packUnit: sp.packUnit,
+          packCount: sp.packCount,
+        },
       },
     });
     if (clash) {

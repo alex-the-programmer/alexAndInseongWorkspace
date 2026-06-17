@@ -1,4 +1,5 @@
 import type { CatalogDedupIngestPrisma } from "../../types/prisma.js";
+import { PackUnit } from "../../core/productPackSize.js";
 import { findOrCreateSellerProduct } from "../findOrCreateSellerProduct.js";
 
 describe("findOrCreateSellerProduct", () => {
@@ -13,8 +14,8 @@ describe("findOrCreateSellerProduct", () => {
     const prisma = {
       sellerProduct: {
         findFirst: async () => existing,
-        upsert: async () => {
-          throw new Error("should not upsert");
+        create: async () => {
+          throw new Error("should not create");
         },
       },
     } as unknown as CatalogDedupIngestPrisma;
@@ -27,18 +28,25 @@ describe("findOrCreateSellerProduct", () => {
     expect(row.id).toBe(1n);
   });
 
-  it("upserts by sellerId and productId when no retailerSku row exists", async () => {
-    const upserted = {
+  it("creates a row when no listing or variant exists", async () => {
+    const created = {
       id: 2n,
       sellerId: 10n,
       productId: 200n,
       retailerSku: "sku-2",
+      packAmount: 500,
+      packUnit: PackUnit.MG,
+      packCount: 1,
     };
 
+    let findCount = 0;
     const prisma = {
       sellerProduct: {
-        findFirst: async () => null,
-        upsert: async () => upserted,
+        findFirst: async () => {
+          findCount += 1;
+          return null;
+        },
+        create: async () => created,
       },
     } as unknown as CatalogDedupIngestPrisma;
 
@@ -46,11 +54,14 @@ describe("findOrCreateSellerProduct", () => {
       sellerId: 10n,
       productId: 200n,
       retailerSku: "sku-2",
+      packAmount: 500,
+      packUnit: PackUnit.MG,
     });
-    expect(row).toEqual(upserted);
+    expect(row).toEqual(created);
+    expect(findCount).toBe(2);
   });
 
-  it("retries lookup after unique-constraint race on upsert", async () => {
+  it("retries lookup after unique-constraint race on create", async () => {
     const raced = {
       id: 3n,
       sellerId: 10n,
@@ -63,9 +74,9 @@ describe("findOrCreateSellerProduct", () => {
       sellerProduct: {
         findFirst: async () => {
           findCount += 1;
-          return findCount === 1 ? null : raced;
+          return findCount <= 2 ? null : raced;
         },
-        upsert: async () => {
+        create: async () => {
           const err = new Error("unique") as Error & { code: string };
           err.code = "P2002";
           throw err;
@@ -79,6 +90,6 @@ describe("findOrCreateSellerProduct", () => {
       retailerSku: "sku-3",
     });
     expect(row.id).toBe(3n);
-    expect(findCount).toBe(2);
+    expect(findCount).toBe(3);
   });
 });

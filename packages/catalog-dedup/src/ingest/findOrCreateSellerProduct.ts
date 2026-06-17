@@ -1,3 +1,4 @@
+import { PackUnit, type PackUnit as PackUnitType } from "../core/productPackSize.js";
 import type { CatalogDedupIngestPrisma, CatalogDedupSellerProduct } from "../types/prisma.js";
 import { isUniqueConstraintError } from "./isUniqueConstraintError.js";
 
@@ -5,7 +6,20 @@ export type FindOrCreateSellerProductParams = {
   sellerId: bigint;
   productId: bigint;
   retailerSku: string;
+  packAmount?: number;
+  packUnit?: PackUnitType;
+  packCount?: number;
+  listingTitle?: string | null;
 };
+
+function resolvePackFields(params: FindOrCreateSellerProductParams) {
+  return {
+    packAmount: params.packAmount ?? 0,
+    packUnit: params.packUnit ?? PackUnit.UNKNOWN,
+    packCount: params.packCount ?? 1,
+    listingTitle: params.listingTitle ?? null,
+  };
+}
 
 export async function findOrCreateSellerProduct(
   prisma: CatalogDedupIngestPrisma,
@@ -17,25 +31,52 @@ export async function findOrCreateSellerProduct(
     throw new Error("findOrCreateSellerProduct requires a non-empty retailerSku");
   }
 
-  const existing = await prisma.sellerProduct.findFirst({
+  const pack = resolvePackFields(params);
+
+  const bySku = await prisma.sellerProduct.findFirst({
     where: { sellerId, retailerSku: sku },
   });
-  if (existing) return existing;
+  if (bySku) return bySku;
+
+  const byVariant = await prisma.sellerProduct.findFirst({
+    where: {
+      sellerId,
+      productId,
+      packAmount: pack.packAmount,
+      packUnit: pack.packUnit,
+      packCount: pack.packCount,
+    },
+  });
+  if (byVariant) return byVariant;
 
   try {
-    return await prisma.sellerProduct.upsert({
-      where: {
-        sellerId_productId: { sellerId, productId },
+    return await prisma.sellerProduct.create({
+      data: {
+        sellerId,
+        productId,
+        retailerSku: sku,
+        ...pack,
       },
-      create: { sellerId, productId, retailerSku: sku },
-      update: { retailerSku: sku },
     });
   } catch (e) {
     if (!isUniqueConstraintError(e)) throw e;
-    const retry = await prisma.sellerProduct.findFirst({
+
+    const retryBySku = await prisma.sellerProduct.findFirst({
       where: { sellerId, retailerSku: sku },
     });
-    if (retry) return retry;
+    if (retryBySku) return retryBySku;
+
+    const retryByVariant = await prisma.sellerProduct.findFirst({
+      where: {
+        sellerId,
+        productId,
+        packAmount: pack.packAmount,
+        packUnit: pack.packUnit,
+        packCount: pack.packCount,
+      },
+    });
+    if (retryByVariant) return retryByVariant;
+
     throw e;
   }
 }
