@@ -92,4 +92,44 @@ describe("findOrCreateSellerProduct", () => {
     expect(row.id).toBe(3n);
     expect(findCount).toBe(3);
   });
+
+  it("updates unknown pack fields when an existing listing is re-ingested", async () => {
+    const existing = {
+      id: 4n,
+      sellerId: 10n,
+      productId: 100n,
+      retailerSku: "sku-4",
+      packAmount: 0,
+      packUnit: PackUnit.UNKNOWN,
+      packCount: 1,
+      listingTitle: "Hand Cream 50ml (5 Options)",
+    };
+    const updated = {
+      ...existing,
+      packAmount: 50,
+      packUnit: PackUnit.ML,
+    };
+
+    const prisma = {
+      sellerProduct: {
+        findFirst: async () => existing,
+        create: async () => {
+          throw new Error("should not create");
+        },
+        update: async () => updated,
+      },
+    } as unknown as CatalogDedupIngestPrisma;
+
+    const row = await findOrCreateSellerProduct(prisma, {
+      sellerId: 10n,
+      productId: 100n,
+      retailerSku: "sku-4",
+      packAmount: 50,
+      packUnit: PackUnit.ML,
+      packCount: 1,
+      listingTitle: "Hand Cream 50ml (5 Options)",
+    });
+
+    expect(row).toEqual(updated);
+  });
 });

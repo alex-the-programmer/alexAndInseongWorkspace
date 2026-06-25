@@ -119,15 +119,27 @@ function tryParseCountSuffix(title) {
         matchedSuffix,
     };
 }
+/** Strip trailing metadata parentheticals, e.g. "(5 Options)" or "(3 Colors)". */
+function stripTrailingParentheticals(title) {
+    let result = title.trim();
+    for (;;) {
+        const stripped = result.replace(/\s+\([^)]+\)\s*$/u, "").trim();
+        if (stripped === result)
+            break;
+        result = stripped;
+    }
+    return result;
+}
 /** Parse trailing pack size from a product title. */
 export function parsePackSizeFromTitle(title) {
     const normalized = collapseWhitespace(title);
     if (!normalized) {
         return { baseName: "", ...UNKNOWN_PACK };
     }
-    const parsed = tryParseCompoundWeightVolume(normalized) ??
-        tryParseSimpleWeightVolume(normalized) ??
-        tryParseCountSuffix(normalized);
+    const forPackParse = stripTrailingParentheticals(normalized);
+    const parsed = tryParseCompoundWeightVolume(forPackParse) ??
+        tryParseSimpleWeightVolume(forPackParse) ??
+        tryParseCountSuffix(forPackParse);
     if (!parsed) {
         return { baseName: normalized, ...UNKNOWN_PACK };
     }

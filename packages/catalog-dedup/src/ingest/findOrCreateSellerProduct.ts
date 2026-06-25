@@ -12,13 +12,60 @@ export type FindOrCreateSellerProductParams = {
   listingTitle?: string | null;
 };
 
-function resolvePackFields(params: FindOrCreateSellerProductParams) {
+type ResolvedPackFields = {
+  packAmount: number;
+  packUnit: PackUnitType;
+  packCount: number;
+  listingTitle: string | null;
+};
+
+function resolvePackFields(params: FindOrCreateSellerProductParams): ResolvedPackFields {
   return {
     packAmount: params.packAmount ?? 0,
     packUnit: params.packUnit ?? PackUnit.UNKNOWN,
     packCount: params.packCount ?? 1,
     listingTitle: params.listingTitle ?? null,
   };
+}
+
+function hasKnownPack(pack: Pick<ResolvedPackFields, "packAmount" | "packUnit">): boolean {
+  return pack.packUnit !== PackUnit.UNKNOWN && pack.packAmount > 0;
+}
+
+function existingPackIsUnknown(
+  row: Pick<CatalogDedupSellerProduct, "packAmount" | "packUnit">,
+): boolean {
+  const amount = row.packAmount ?? 0;
+  const unit = row.packUnit ?? PackUnit.UNKNOWN;
+  return unit === PackUnit.UNKNOWN || amount <= 0;
+}
+
+async function refreshSellerProductListingFields(
+  prisma: CatalogDedupIngestPrisma,
+  existing: CatalogDedupSellerProduct,
+  pack: ResolvedPackFields,
+): Promise<CatalogDedupSellerProduct> {
+  const needsPackUpdate = existingPackIsUnknown(existing) && hasKnownPack(pack);
+  const needsTitleUpdate =
+    pack.listingTitle != null &&
+    pack.listingTitle.trim() !== "" &&
+    pack.listingTitle !== existing.listingTitle;
+
+  if (!needsPackUpdate && !needsTitleUpdate) return existing;
+
+  return prisma.sellerProduct.update({
+    where: { id: existing.id },
+    data: {
+      ...(needsPackUpdate
+        ? {
+            packAmount: pack.packAmount,
+            packUnit: pack.packUnit,
+            packCount: pack.packCount,
+          }
+        : {}),
+      ...(needsTitleUpdate ? { listingTitle: pack.listingTitle } : {}),
+    },
+  });
 }
 
 export async function findOrCreateSellerProduct(
@@ -36,7 +83,7 @@ export async function findOrCreateSellerProduct(
   const bySku = await prisma.sellerProduct.findFirst({
     where: { sellerId, retailerSku: sku },
   });
-  if (bySku) return bySku;
+  if (bySku) return refreshSellerProductListingFields(prisma, bySku, pack);
 
   const byVariant = await prisma.sellerProduct.findFirst({
     where: {
@@ -47,7 +94,7 @@ export async function findOrCreateSellerProduct(
       packCount: pack.packCount,
     },
   });
-  if (byVariant) return byVariant;
+  if (byVariant) return refreshSellerProductListingFields(prisma, byVariant, pack);
 
   try {
     return await prisma.sellerProduct.create({
@@ -64,7 +111,7 @@ export async function findOrCreateSellerProduct(
     const retryBySku = await prisma.sellerProduct.findFirst({
       where: { sellerId, retailerSku: sku },
     });
-    if (retryBySku) return retryBySku;
+    if (retryBySku) return refreshSellerProductListingFields(prisma, retryBySku, pack);
 
     const retryByVariant = await prisma.sellerProduct.findFirst({
       where: {
@@ -75,7 +122,7 @@ export async function findOrCreateSellerProduct(
         packCount: pack.packCount,
       },
     });
-    if (retryByVariant) return retryByVariant;
+    if (retryByVariant) return refreshSellerProductListingFields(prisma, retryByVariant, pack);
 
     throw e;
   }

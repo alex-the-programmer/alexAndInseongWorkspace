@@ -154,6 +154,17 @@ function tryParseCountSuffix(title: string): ParsedSuffix | null {
   };
 }
 
+/** Strip trailing metadata parentheticals, e.g. "(5 Options)" or "(3 Colors)". */
+function stripTrailingParentheticals(title: string): string {
+  let result = title.trim();
+  for (;;) {
+    const stripped = result.replace(/\s+\([^)]+\)\s*$/u, "").trim();
+    if (stripped === result) break;
+    result = stripped;
+  }
+  return result;
+}
+
 /** Parse trailing pack size from a product title. */
 export function parsePackSizeFromTitle(title: string): PackSizeParseResult {
   const normalized = collapseWhitespace(title);
@@ -161,10 +172,11 @@ export function parsePackSizeFromTitle(title: string): PackSizeParseResult {
     return { baseName: "", ...UNKNOWN_PACK };
   }
 
+  const forPackParse = stripTrailingParentheticals(normalized);
   const parsed =
-    tryParseCompoundWeightVolume(normalized) ??
-    tryParseSimpleWeightVolume(normalized) ??
-    tryParseCountSuffix(normalized);
+    tryParseCompoundWeightVolume(forPackParse) ??
+    tryParseSimpleWeightVolume(forPackParse) ??
+    tryParseCountSuffix(forPackParse);
 
   if (!parsed) {
     return { baseName: normalized, ...UNKNOWN_PACK };

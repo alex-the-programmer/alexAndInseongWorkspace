@@ -68,6 +68,20 @@ describe("parsePackSizeFromTitle", () => {
       packAmount: 0,
     });
   });
+
+  it("parses pack size before trailing option-count parentheticals", () => {
+    expect(
+      parsePackSizeFromTitle("Perfumed Keyring Hand Cream 50ml (5 Options)")
+    ).toMatchObject({
+      baseName: "Perfumed Keyring Hand Cream",
+      packAmount: 50,
+      packUnit: PackUnit.ML,
+      packCount: 1,
+    });
+    expect(stripPackSizeForDedup("Perfumed Keyring Hand Cream 50ml (5 Options)")).toBe(
+      "Perfumed Keyring Hand Cream"
+    );
+  });
 });
 
 describe("stripPackSizeForDedup", () => {

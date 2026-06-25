@@ -8,6 +8,35 @@ function resolvePackFields(params) {
         listingTitle: params.listingTitle ?? null,
     };
 }
+function hasKnownPack(pack) {
+    return pack.packUnit !== PackUnit.UNKNOWN && pack.packAmount > 0;
+}
+function existingPackIsUnknown(row) {
+    const amount = row.packAmount ?? 0;
+    const unit = row.packUnit ?? PackUnit.UNKNOWN;
+    return unit === PackUnit.UNKNOWN || amount <= 0;
+}
+async function refreshSellerProductListingFields(prisma, existing, pack) {
+    const needsPackUpdate = existingPackIsUnknown(existing) && hasKnownPack(pack);
+    const needsTitleUpdate = pack.listingTitle != null &&
+        pack.listingTitle.trim() !== "" &&
+        pack.listingTitle !== existing.listingTitle;
+    if (!needsPackUpdate && !needsTitleUpdate)
+        return existing;
+    return prisma.sellerProduct.update({
+        where: { id: existing.id },
+        data: {
+            ...(needsPackUpdate
+                ? {
+                    packAmount: pack.packAmount,
+                    packUnit: pack.packUnit,
+                    packCount: pack.packCount,
+                }
+                : {}),
+            ...(needsTitleUpdate ? { listingTitle: pack.listingTitle } : {}),
+        },
+    });
+}
 export async function findOrCreateSellerProduct(prisma, params) {
     const { sellerId, productId, retailerSku } = params;
     const sku = retailerSku.trim();
@@ -19,7 +48,7 @@ export async function findOrCreateSellerProduct(prisma, params) {
         where: { sellerId, retailerSku: sku },
     });
     if (bySku)
-        return bySku;
+        return refreshSellerProductListingFields(prisma, bySku, pack);
     const byVariant = await prisma.sellerProduct.findFirst({
         where: {
             sellerId,
@@ -30,7 +59,7 @@ export async function findOrCreateSellerProduct(prisma, params) {
         },
     });
     if (byVariant)
-        return byVariant;
+        return refreshSellerProductListingFields(prisma, byVariant, pack);
     try {
         return await prisma.sellerProduct.create({
             data: {
@@ -48,7 +77,7 @@ export async function findOrCreateSellerProduct(prisma, params) {
             where: { sellerId, retailerSku: sku },
         });
         if (retryBySku)
-            return retryBySku;
+            return refreshSellerProductListingFields(prisma, retryBySku, pack);
         const retryByVariant = await prisma.sellerProduct.findFirst({
             where: {
                 sellerId,
@@ -59,7 +88,7 @@ export async function findOrCreateSellerProduct(prisma, params) {
             },
         });
         if (retryByVariant)
-            return retryByVariant;
+            return refreshSellerProductListingFields(prisma, retryByVariant, pack);
         throw e;
     }
 }

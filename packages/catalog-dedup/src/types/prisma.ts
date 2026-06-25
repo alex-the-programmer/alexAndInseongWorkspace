@@ -80,5 +80,14 @@ export type CatalogDedupIngestPrisma = {
         listingTitle?: string | null;
       };
     }): Promise<CatalogDedupSellerProduct>;
+    update(args: {
+      where: { id: bigint };
+      data: {
+        packAmount?: number;
+        packUnit?: PackUnit;
+        packCount?: number;
+        listingTitle?: string | null;
+      };
+    }): Promise<CatalogDedupSellerProduct>;
   };
 };
