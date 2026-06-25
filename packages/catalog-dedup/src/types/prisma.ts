@@ -1,3 +1,5 @@
+import type { PackUnit } from "../core/productPackSize.js";
+
 /** Brand row returned by ingest helpers — not tied to a specific Prisma generate. */
 export type CatalogDedupBrand = {
   id: bigint;
@@ -21,6 +23,10 @@ export type CatalogDedupSellerProduct = {
   sellerId: bigint;
   productId: bigint;
   retailerSku: string | null;
+  packAmount?: number;
+  packUnit?: PackUnit;
+  packCount?: number;
+  listingTitle?: string | null;
 };
 
 /** Minimal Prisma surface for ingest — accepts any consumer repo's PrismaClient. */
@@ -63,10 +69,25 @@ export type CatalogDedupIngestPrisma = {
       where: Record<string, unknown>;
       include?: Record<string, unknown>;
     }): Promise<(CatalogDedupSellerProduct & { product?: CatalogDedupProduct }) | null>;
-    upsert(args: {
-      where: { sellerId_productId: { sellerId: bigint; productId: bigint } };
-      create: { sellerId: bigint; productId: bigint; retailerSku?: string };
-      update: { retailerSku?: string };
+    create(args: {
+      data: {
+        sellerId: bigint;
+        productId: bigint;
+        retailerSku: string;
+        packAmount?: number;
+        packUnit?: PackUnit;
+        packCount?: number;
+        listingTitle?: string | null;
+      };
+    }): Promise<CatalogDedupSellerProduct>;
+    update(args: {
+      where: { id: bigint };
+      data: {
+        packAmount?: number;
+        packUnit?: PackUnit;
+        packCount?: number;
+        listingTitle?: string | null;
+      };
     }): Promise<CatalogDedupSellerProduct>;
   };
 };

@@ -1,4 +1,5 @@
 import { isUnknownBrandName, normalizeBrandName } from "./brandNormalize.js";
+import { stripPackSizeForDedup } from "./productPackSize.js";
 const SELLER_BRAND_STRIP_DENYLIST = new Set(["💗bogo", "bogo", "k-pop", "kpop", "daiso", "md"].map((s) => s.toLowerCase()));
 /** Decode common HTML entities in scraped listing titles. */
 export function decodeHtmlEntities(name) {
@@ -105,8 +106,12 @@ export function normalizeProductTitle(name, sellerBrandName = "") {
     result = stripSellerBrandPrefix(result, sellerBrandName);
     return collapseWhitespace(result);
 }
+/** Base product-line title (promo/brand/pack stripped) for `products.name`. */
+export function canonicalProductBaseName(name, sellerBrandName = "") {
+    return stripPackSizeForDedup(normalizeProductTitle(name, sellerBrandName));
+}
 /** Lowercase form used for dedup equality and blocking comparisons. */
 export function normalizeProductNameForDedup(name, sellerBrandName = "") {
-    return normalizeProductTitle(name, sellerBrandName).toLowerCase();
+    return canonicalProductBaseName(name, sellerBrandName).toLowerCase();
 }
 //# sourceMappingURL=productNameNormalize.js.map

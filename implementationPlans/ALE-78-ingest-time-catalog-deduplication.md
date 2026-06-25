@@ -6,6 +6,8 @@
 
 **Follow-up to:** [ALE-77](./ALE-77-cross-retailer-product-deduplication-evaluation.md) — batch brand + product dedup shipped locally; scrapers still create one `products` row per retailer listing, then scripts merge clusters offline.
 
+**Later follow-ups:** [ALE-79](./ALE-79-strip-promotional-prefixes-from-product-names.md) (title promo/brand noise) · [ALE-80](./ALE-80-normalize-pack-size-variants-for-deduplication.md) (pack-size variants on `seller_products`, base product names, shopping card dropdown). Operational runbook: [`commerce-platform-backend/scripts/catalog-dedup/README.md`](../commerce-platform-backend/scripts/catalog-dedup/README.md).
+
 **Design constraints (from product review):**
 
 - **Ingest:** scrapers call shared `findOrCreate*` only — no per-retailer dedup copy-paste.
@@ -728,6 +730,7 @@ Once Phase 3 ingest dedup is live **and** Phase 4 backfill is complete. **Keep b
 
 - **Routine scrape path:** ingest only — no bulk merge step
 - **Occasional maintenance:** document when to run `audit-brands` / `audit-products` and `merge-*` (e.g. after discovering a new duplication source, before adding a new ingest rule)
+- **Pack-size maintenance (ALE-80):** after new retailer ingest or bulk import, run `audit-pack-size-clusters.ts`; merge only after JSON review — see [`scripts/catalog-dedup/README.md`](../commerce-platform-backend/scripts/catalog-dedup/README.md)
 - Update ALE-77 plan: tombstones removed; bulk tools preserved under `scripts/catalog-dedup/`
 
 **Exit criteria:** No `mergedIntoProductId` in schema or code; bulk CLIs work via shared package; scrapers contain no dedup logic beyond `findOrCreate*` imports; lint/build/test pass.
@@ -966,7 +969,9 @@ They share tokenization **ideas** (lowercase, alphanumeric/Hangul, stop words) b
 ### Phase 4 — One-time legacy backfill
 - [ ] Run brand + product bulk merges on production (last tombstone-era pass if needed)
 - [x] Backfill `seller_products.retailerSku` from legacy `products.sku` (local dev: 22,499 rows)
-- [ ] Hard-delete all tombstone product rows; verify zero `mergedIntoProductId`
+- [x] Local Phase 4 merges: brands 1867→1781 (v1+v2), products 509 merged (107 clusters), `audit-products` edges 1570→0
+- [x] Local tombstone hard-delete: 33,503 rows removed; `mergedIntoProductId` count = 0; ingest validation still passes
+- [ ] Hard-delete all tombstone product rows on staging/prod; verify zero `mergedIntoProductId`
 
 ### Phase 5 — Remove tombstones; keep bulk CLIs
 - [ ] Migration: drop `product_match_candidates` + `ProductMatchStatus` — architect approval
@@ -977,7 +982,7 @@ They share tokenization **ideas** (lowercase, alphanumeric/Hangul, stop words) b
 - [ ] Delete scraper tombstone resolvers + enrich job calls
 - [ ] Remove `getShoppingProductCardsBatch` tombstone fallback
 - [ ] Scrapers `db:pull` + `db:generate`; both repos lint/build/test pass
-- [ ] Update runbook: routine = ingest only; occasional = `audit-*` / `merge-*`
+- [ ] Update runbook: routine = ingest only; occasional = `audit-*` / `merge-*` — see [`scripts/catalog-dedup/README.md`](../commerce-platform-backend/scripts/catalog-dedup/README.md)
 
 ### Phase 6 — Canonical categories + delete placeholders
 - [ ] Seed CANONICAL taxonomy + Uncategorized leaf (backend migration/script)

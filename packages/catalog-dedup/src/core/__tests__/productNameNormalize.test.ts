@@ -1,4 +1,5 @@
 import {
+  canonicalProductBaseName,
   decodeHtmlEntities,
   isPromoBracketTag,
   normalizeProductNameForDedup,
@@ -100,5 +101,19 @@ describe("normalizeProductTitle", () => {
     );
     const b = normalizeProductNameForDedup("COSRX Pure Fit Cica Cream 50ml", "COSRX");
     expect(a).toBe(b);
+  });
+
+  it("strips trailing pack size for dedup comparison across sizes", () => {
+    const small = normalizeProductNameForDedup("Vitamin C Serum 500mg", "Brand");
+    const large = normalizeProductNameForDedup("Vitamin C Serum 1000mg", "Brand");
+    expect(small).toBe(large);
+  });
+});
+
+describe("canonicalProductBaseName", () => {
+  it("returns promo/brand/pack-stripped title for storage", () => {
+    expect(
+      canonicalProductBaseName("[BOGO] COSRX Pure Fit Cica Cream 50ml", "COSRX")
+    ).toBe("Pure Fit Cica Cream");
   });
 });

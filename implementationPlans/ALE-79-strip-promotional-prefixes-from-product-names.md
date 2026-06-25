@@ -249,7 +249,7 @@ For **bulk dedup** on existing rows without seller context per product: use cano
 
 ## Follow-up (out of scope — separate Linear ticket)
 
-**ALE-?? Normalize product quantity/size tokens for deduplication**
+**[ALE-80](./ALE-80-normalize-pack-size-variants-for-deduplication.md) Normalize pack size variants for product deduplication and shopping cards**
 
 - Strip or canonicalize `500ml`, `50ml`, `10 pills`, `30g*5`, `x 30 sticks` for **matching only**
 - Handle equivalent unit forms (`ml` vs `mL`, `pcs` vs `ea`)
@@ -263,5 +263,5 @@ For **bulk dedup** on existing rows without seller context per product: use cano
 - [x] Phase 2: wire into `upsertCatalogListing` + `isBlockedPair` + `findOrCreateProduct`
 - [x] Phase 3: bulk title backfill (`cleanup-product-titles.ts` --apply) + merge dry-run on local DB
 - [x] Phase 3: measure merge count and title rewrite count
-- [ ] Phase 4: document runbook for BOGO brand-bucket edge cases
-- [ ] Create follow-up Linear ticket for quantity/size normalization
+- [x] Phase 4: document runbook for BOGO brand-bucket edge cases (see plan risks section)
+- [x] Create follow-up Linear ticket for quantity/size normalization → [ALE-80](./ALE-80-normalize-pack-size-variants-for-deduplication.md)

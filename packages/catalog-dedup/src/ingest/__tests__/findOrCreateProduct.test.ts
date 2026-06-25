@@ -181,7 +181,7 @@ describe("findOrCreateProduct", () => {
   it("reuses a match when incoming title has a promo prefix", async () => {
     const match = {
       id: 600n,
-      name: "Pure Fit Cica Cream 50ml",
+      name: "Pure Fit Cica Cream",
       brandId: 1n,
       categoryId: 5n,
       sku: "other-sku",
@@ -209,10 +209,10 @@ describe("findOrCreateProduct", () => {
     expect(product.id).toBe(600n);
   });
 
-  it("stores a cleaned name when creating a product", async () => {
+  it("stores a base name without pack size when creating a product", async () => {
     const created = {
       id: 700n,
-      name: "Pure Fit Cica Cream 50ml",
+      name: "Pure Fit Cica Cream",
       brandId: 1n,
       categoryId: 5n,
       sku: null,
@@ -227,7 +227,7 @@ describe("findOrCreateProduct", () => {
         findFirst: async () => null,
         findMany: async () => [],
         create: async (args: { data: { name: string; brandId: bigint; categoryId: bigint } }) => {
-          expect(args.data.name).toBe("Pure Fit Cica Cream 50ml");
+          expect(args.data.name).toBe("Pure Fit Cica Cream");
           return created;
         },
         findUnique: async () => null,
@@ -239,5 +239,38 @@ describe("findOrCreateProduct", () => {
       name: "COSRX Pure Fit Cica Cream 50ml",
     });
     expect(product.id).toBe(700n);
+  });
+
+  it("reuses a cross-seller match when only pack size differs", async () => {
+    const match = {
+      id: 800n,
+      name: "Freshly Juiced Vitamin E Mask",
+      brandId: 1n,
+      categoryId: 5n,
+      sku: "other-sku",
+      mergedIntoProductId: null,
+    };
+
+    const prisma = {
+      sellerProduct: {
+        findFirst: async () => null,
+      },
+      product: {
+        findFirst: async () => null,
+        findMany: async () => [match],
+        create: async () => {
+          throw new Error("should not create when pack-size variant matches");
+        },
+        findUnique: async () => null,
+      },
+    } as unknown as CatalogDedupIngestPrisma;
+
+    const product = await findOrCreateProduct(prisma, {
+      ...baseParams,
+      sellerId: 99n,
+      name: "Dear, Klairs Freshly Juiced Vitamin E Mask 90g",
+      retailerSku: "klairs-90g",
+    });
+    expect(product.id).toBe(800n);
   });
 });

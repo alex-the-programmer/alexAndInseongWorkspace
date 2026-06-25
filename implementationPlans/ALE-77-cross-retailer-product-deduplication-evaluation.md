@@ -17,6 +17,8 @@ We recently ingested catalog data from many new K-beauty retailers (multi-brand 
 **Related:**
 
 - [ALE-76](./ALE-76-extend-catalog-spec-resolution-new-retailers.md) — merged products carry specs from multiple retailers; thumbnail/ingredient resolution must stay correct after dedup.
+- [ALE-78](./ALE-78-ingest-time-catalog-deduplication.md) — ingest-time `findOrCreate*`; bulk scripts retained for occasional repair.
+- [ALE-80](./ALE-80-normalize-pack-size-variants-for-deduplication.md) — pack size stripped from `products.name`; multiple sizes per line are `seller_products` variants (shipped after ALE-77 batch merge).
 - Scrape integration plans (ALE-56–74) — all explicitly defer `ProductMatchCandidate` merges to this work.
 
 ---
@@ -588,6 +590,7 @@ After each rollout batch:
 - Scheduled job or manual runbook: new catalog → `buildProductMatchCandidates` → `mergeMatchedProducts`
 - Dashboard: candidate count per seller pair, merges per week, duplicate rate by seller, heuristic false-positive samples
 - Re-open [ALE-76](./ALE-76-extend-catalog-spec-resolution-new-retailers.md) if merged spec conflicts affect thumbnails/ingredients
+- **Pack-size duplicates:** ingest-time normalization in [ALE-80](./ALE-80-normalize-pack-size-variants-for-deduplication.md); occasional audit via [`commerce-platform-backend/scripts/catalog-dedup/README.md`](../commerce-platform-backend/scripts/catalog-dedup/README.md) § Pack-size audit runbook
 
 ---
 
@@ -596,7 +599,7 @@ After each rollout batch:
 | Risk | Mitigation |
 |------|------------|
 | Brand duplicates split product matching | **Phase 0** v1 merge + **Phase 0.5** aggressive merge + case-insensitive + aggressive ingest lookup; optional `brands.normalizedName` unique |
-| False merge combines different sizes/shades | Phase 1 ground-truth precision; tune `MIN_TOKEN_OVERLAP`; optional volume parsing in v2 |
+| False merge combines different sizes/shades | Phase 1 ground-truth precision; tune `MIN_TOKEN_OVERLAP`; **ALE-80** separates pack size onto `seller_products` and merges quantity-only clusters via dedicated audit |
 | Heuristic too loose (similar titles, different variants) | Manual spot-checks per rollout batch; stricter overlap threshold per seller pair |
 | Wrong canonical root (suboptimal name/category on survivor) | Root picker tie-breakers; ALE-76 spec resolution picks best thumbnail/ingredients per offering |
 | OY-absent clusters (US-only retailers) | Union-find across all sellers — no OY required |
@@ -782,6 +785,12 @@ src/jobs/*/enrichProductPdp.ts           # 18 retailers → resolveCanonicalProd
 - Production DB not deduped yet.
 - `runLlmProductMatching.ts` still on disk; not removed from repo.
 - Phase 1 scripts (`productDedupBaselineReport`, `productDedupEvaluate`, ground-truth fixtures) not built.
+
+### Follow-up tickets (after ALE-77)
+
+- [ALE-78](./ALE-78-ingest-time-catalog-deduplication.md) — ingest-time dedup; tombstone removal; shared `catalog-dedup` package.
+- [ALE-79](./ALE-79-strip-promotional-prefixes-from-product-names.md) — promo/brand prefix stripping in title normalization.
+- [ALE-80](./ALE-80-normalize-pack-size-variants-for-deduplication.md) — pack size on `seller_products`, base `products.name`, shopping card variant dropdown. Maintenance: [`scripts/catalog-dedup/README.md`](../commerce-platform-backend/scripts/catalog-dedup/README.md).
 
 ---
 

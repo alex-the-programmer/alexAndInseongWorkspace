@@ -8,6 +8,30 @@ type SellerProductRow = CatalogDedupSellerProduct & {
   product?: CatalogDedupProduct;
 };
 
+function variantKey(row: Pick<CatalogDedupSellerProduct, "sellerId" | "productId" | "packAmount" | "packUnit" | "packCount">) {
+  return `${row.sellerId}:${row.productId}:${row.packAmount ?? 0}:${row.packUnit ?? "UNKNOWN"}:${row.packCount ?? 1}`;
+}
+
+function matchesSellerProductWhere(
+  row: SellerProductRow,
+  where: {
+    sellerId?: bigint;
+    retailerSku?: string;
+    productId?: bigint;
+    packAmount?: number;
+    packUnit?: string;
+    packCount?: number;
+  }
+): boolean {
+  if (where.sellerId !== undefined && row.sellerId !== where.sellerId) return false;
+  if (where.retailerSku !== undefined && row.retailerSku !== where.retailerSku) return false;
+  if (where.productId !== undefined && row.productId !== where.productId) return false;
+  if (where.packAmount !== undefined && (row.packAmount ?? 0) !== where.packAmount) return false;
+  if (where.packUnit !== undefined && (row.packUnit ?? "UNKNOWN") !== where.packUnit) return false;
+  if (where.packCount !== undefined && (row.packCount ?? 1) !== where.packCount) return false;
+  return true;
+}
+
 /** Minimal in-memory Prisma double for ingest integration scenarios. */
 export function createInMemoryIngestPrisma(): {
   prisma: CatalogDedupIngestPrisma;
@@ -38,7 +62,7 @@ export function createInMemoryIngestPrisma(): {
         where: {
           brandId: bigint;
           mergedIntoProductId: null;
-          sellerProducts?: { some: { sellerId: { not: bigint } } };
+          sellerProducts?: { some: { sellerId?: { not: bigint } } | Record<string, never> };
         };
         take?: number;
         orderBy?: { id: "asc" | "desc" };
@@ -46,13 +70,19 @@ export function createInMemoryIngestPrisma(): {
         let rows = [...products.values()].filter(
           (p) => p.brandId === where.brandId && p.mergedIntoProductId === null,
         );
-        if (where.sellerProducts?.some?.sellerId?.not !== undefined) {
-          const excludeSeller = where.sellerProducts.some.sellerId.not;
-          rows = rows.filter((p) =>
-            sellerProducts.some(
-              (sp) => sp.productId === p.id && sp.sellerId !== excludeSeller,
-            ),
-          );
+        if (where.sellerProducts?.some !== undefined) {
+          const excludeSeller = where.sellerProducts.some.sellerId?.not;
+          if (excludeSeller !== undefined) {
+            rows = rows.filter((p) =>
+              sellerProducts.some(
+                (sp) => sp.productId === p.id && sp.sellerId !== excludeSeller,
+              ),
+            );
+          } else {
+            rows = rows.filter((p) =>
+              sellerProducts.some((sp) => sp.productId === p.id),
+            );
+          }
         }
         if (orderBy?.id === "asc") {
           rows.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
@@ -96,15 +126,13 @@ export function createInMemoryIngestPrisma(): {
           sellerId?: bigint;
           retailerSku?: string;
           productId?: bigint;
+          packAmount?: number;
+          packUnit?: string;
+          packCount?: number;
         };
         include?: { product?: boolean };
       }) => {
-        const row = sellerProducts.find((sp) => {
-          if (where.sellerId !== undefined && sp.sellerId !== where.sellerId) return false;
-          if (where.retailerSku !== undefined && sp.retailerSku !== where.retailerSku) return false;
-          if (where.productId !== undefined && sp.productId !== where.productId) return false;
-          return true;
-        });
+        const row = sellerProducts.find((sp) => matchesSellerProductWhere(sp, where));
         if (!row) return null;
         if (include?.product) {
           const product = products.get(row.productId.toString());
@@ -112,29 +140,48 @@ export function createInMemoryIngestPrisma(): {
         }
         return row;
       },
-      upsert: async ({
-        where,
-        create,
-        update,
+      create: async ({
+        data,
       }: {
-        where: { sellerId_productId: { sellerId: bigint; productId: bigint } };
-        create: { sellerId: bigint; productId: bigint; retailerSku: string };
-        update: { retailerSku: string };
+        data: {
+          sellerId: bigint;
+          productId: bigint;
+          retailerSku: string;
+          packAmount?: number;
+          packUnit?: string;
+          packCount?: number;
+          listingTitle?: string | null;
+        };
       }) => {
-        const { sellerId, productId } = where.sellerId_productId;
-        const existing = sellerProducts.find(
-          (sp) => sp.sellerId === sellerId && sp.productId === productId,
-        );
-        if (existing) {
-          existing.retailerSku = update.retailerSku;
-          return existing;
-        }
         const row: SellerProductRow = {
           id: nextSellerProductId++,
-          sellerId: create.sellerId,
-          productId: create.productId,
-          retailerSku: create.retailerSku,
+          sellerId: data.sellerId,
+          productId: data.productId,
+          retailerSku: data.retailerSku,
+          packAmount: data.packAmount ?? 0,
+          packUnit: data.packUnit ?? "UNKNOWN",
+          packCount: data.packCount ?? 1,
+          listingTitle: data.listingTitle ?? null,
         };
+
+        const skuConflict = sellerProducts.find(
+          (sp) => sp.sellerId === row.sellerId && sp.retailerSku === row.retailerSku,
+        );
+        if (skuConflict) {
+          const err = new Error("unique") as Error & { code: string };
+          err.code = "P2002";
+          throw err;
+        }
+
+        const variantConflict = sellerProducts.find(
+          (sp) => variantKey(sp) === variantKey(row),
+        );
+        if (variantConflict) {
+          const err = new Error("unique") as Error & { code: string };
+          err.code = "P2002";
+          throw err;
+        }
+
         sellerProducts.push(row);
         return row;
       },

@@ -9,6 +9,8 @@ export declare function stripPromotionalPrefixes(name: string): string;
 export declare function stripSellerBrandPrefix(name: string, sellerBrandName: string): string;
 /** Full title cleanup for storage and matching (promo prefixes, then seller brand). */
 export declare function normalizeProductTitle(name: string, sellerBrandName?: string): string;
+/** Base product-line title (promo/brand/pack stripped) for `products.name`. */
+export declare function canonicalProductBaseName(name: string, sellerBrandName?: string): string;
 /** Lowercase form used for dedup equality and blocking comparisons. */
 export declare function normalizeProductNameForDedup(name: string, sellerBrandName?: string): string;
 //# sourceMappingURL=productNameNormalize.d.ts.map
