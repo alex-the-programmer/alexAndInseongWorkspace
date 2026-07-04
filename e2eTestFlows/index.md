@@ -20,6 +20,7 @@ Setup: [`SETUP.md`](SETUP.md)
 | **P1** | Product delivery (no deferral) | [`chat-product-delivery.md`](flows/chat-product-delivery.md) | 1 |
 | **P1** | Known profile / quiz | [`chat-known-profile.md`](flows/chat-known-profile.md) | 1 |
 | **P1** | Opening quiz nudge | [`chat-opening-nudge.md`](flows/chat-opening-nudge.md) | 1 |
+| **P1** | Product scope (no unprompted masks) | [`chat-product-scope.md`](flows/chat-product-scope.md) | 1 |
 | **P1** | Chat thread CRUD | [`chat-thread-management.md`](flows/chat-thread-management.md) | 4 |
 | **P1** | Add/remove routine product | [`routine-add-product.md`](flows/routine-add-product.md) | 2 |
 | **P1** | Skin quiz (initial + retake) | [`skin-quiz-complete.md`](flows/skin-quiz-complete.md) | 4 |
