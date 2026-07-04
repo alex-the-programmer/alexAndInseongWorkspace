@@ -30,3 +30,13 @@
   2. Click **Send**
 - **Assertions:**
   - Sign-up wall dialog opens (message stored for post-auth pending send)
+
+### landing-signed-out-04: Sign-up wall layers above header (ALE-88)
+
+- **Steps:**
+  1. On `/`, click header **Sign up**
+  2. Repeat with header **Log in**
+- **Assertions:**
+  - Dialog opens (`Create your free Dewly account` / `Log in to your Dewly account`)
+  - `elementFromPoint` at the header auth button center hits `.commerceSignUpWall`, not `.commerceAppHeader`
+- **Spec:** `playwright/tests/home/sign-up-wall-layering.spec.ts` (`chromium-guest`)
