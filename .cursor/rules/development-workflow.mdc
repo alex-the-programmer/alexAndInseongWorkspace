@@ -19,10 +19,17 @@ alwaysApply: true
 - Before committing or pushing, run the repo's checks and fix all failures. Do not push broken code.
 - **Backends** (`commerce-platform-backend`, `conquistador`, `car-finding-concierge`): `npm run lint` then `npm run build`. Run `npm test` when behavior changed.
 - **Frontends**: `npm run lint`, `npm run build`, and tests when applicable.
-- If a repo has no `lint` script, use `npm run build` (which must include typechecking).
+- **Scrapers** (`commerce-platform-scrapers`): `npm run build` and `npm test` when behavior changed.
+- When touching covered code paths, run `npm run test:coverage` in the affected repo. See `.cursor/rules/test-coverage.mdc`.
 
 ## Pull requests
 - Create PRs against `main` for all repos in this workspace.
 - Always create the PRs at the end of our initial implementation after you're done writing and running unit tests.
 - When creating a PR, do it for every repo that has changes.
 - After you create a PR, report the link to it back to the chat so that I can open it.
+
+## E2E automation
+
+User-visible bug fixes should include a Playwright repro test when feasible (TDD: failing E2E first, then fix). Agent/chat cases log `[agent-response-review]` JSON for post-run analysis.
+
+See `.cursor/rules/e2e-automation.mdc`. Skills: `playwright-e2e` (write tests), `run-e2e-automation` (run locally or staging).
