@@ -54,9 +54,9 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/commerce_platform
 
-      - name: Run tests
+      - name: Run tests with coverage
         working-directory: commerce-platform-backend
-        run: npm test
+        run: npm run test:coverage
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/commerce_platform
           HASH_IDS_SALT: ${{ secrets.HASH_IDS_SALT }}
@@ -64,3 +64,55 @@ jobs:
           PORT: 4020
           CLERK_AUTHORIZED_PARTY: http://localhost:3020
           CORS_ORIGIN: http://localhost:3020
+
+  commerce-platform-frontend:
+    name: Commerce Platform Frontend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout commerce-platform-frontend submodule
+        run: git submodule update --init commerce-platform-frontend
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: commerce-platform-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: commerce-platform-frontend
+        run: npm ci
+
+      - name: Run tests with coverage
+        working-directory: commerce-platform-frontend
+        run: npm run test:coverage
+
+  commerce-platform-scrapers:
+    name: Commerce Platform Scrapers Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout commerce-platform-scrapers submodule
+        run: git submodule update --init commerce-platform-scrapers
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: commerce-platform-scrapers/package-lock.json
+
+      - name: Install scrapers dependencies
+        working-directory: commerce-platform-scrapers
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: commerce-platform-scrapers
+        run: npx prisma generate
+
+      - name: Run tests with coverage
+        working-directory: commerce-platform-scrapers
+        run: npm run test:coverage

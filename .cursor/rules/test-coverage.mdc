@@ -1,0 +1,28 @@
+---
+description: Jest coverage expectations for commerce-platform backend, frontend, and scrapers
+globs: commerce-platform-backend/**,commerce-platform-frontend/**,commerce-platform-scrapers/**
+alwaysApply: false
+---
+
+# Test coverage (≥90% goal)
+
+Target **≥90% global line coverage** in each repo. Measure with `npm run test:coverage`.
+
+## When changing production code
+
+Include or update Jest tests in the same PR:
+
+| Repo | Paths | Pattern |
+| ---- | ----- | ------- |
+| Backend | `src/interactions/`, `src/tools/` | DB + fabbrica (`usePrisma()`); GraphQL → mock interactions |
+| Frontend | `components/`, `lib/`, `app/` | RTL; mock `@/lib/graphql` hooks |
+| Scrapers | `src/scrapers/`, `src/db/` | Fixture HTML/JSON; mock `catalog-dedup/ingest` + Prisma |
+
+## Rules
+
+- Do **not** lower `coverageThreshold` to green CI — add tests or get plan approval for exclusions.
+- LLM/agent paths: mock `trackedAgentGenerate`; assert deterministic branches only.
+- `catalog-dedup/core` matching logic is tested in the package (≥90%); scrapers/backend test wiring only.
+- Before push on coverage-sensitive paths: `npm test` and `npm run test:coverage` in the affected repo.
+
+See `implementationPlans/ALE-25-improve-test-coverage.md`.

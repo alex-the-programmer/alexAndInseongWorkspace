@@ -1,0 +1,63 @@
+---
+description: E2E automation, bug-fix TDD, and LLM output review patterns for commerce-platform-frontend
+globs:
+alwaysApply: true
+---
+
+# E2E automation
+
+Default product for browser automation: **commerce-platform-frontend** Playwright suite + workspace `e2eTestFlows/`.
+
+**Skills:**
+- **Write / extend tests** → `.cursor/skills/playwright-e2e/`
+- **Run tests locally or on staging** → `.cursor/skills/run-e2e-automation/`
+
+## Bug fixes — TDD with E2E first
+
+When fixing a **user-visible bug** (especially chat, agent, routine, auth, navigation):
+
+1. **Reproduce first** — add or extend a Playwright case in `e2eTestFlows/flows/` and `commerce-platform-frontend/playwright/tests/` **before** or alongside the fix.
+2. **Confirm red** — run the spec against unfixed behavior when possible (main or pre-fix branch).
+3. **Implement fix** — backend/frontend as needed.
+4. **Confirm green** — same spec passes on the fix branch.
+5. **Ship both** — E2E PR can pair with backend/frontend fix PRs (matching `ALE-*` branch names).
+
+Skip E2E only when the bug is purely internal (no UI surface) or automation is genuinely infeasible — note why in the implementation plan.
+
+## LLM / agent output in E2E
+
+Do **not** assert exact assistant prose. For agent/chat bugs:
+
+1. Use `playwright/helpers/agentResponseReview.ts`.
+2. Log each turn with the marker prefix **`[agent-response-review]`** followed by JSON (`logAgentResponseReview` / `captureAgentResponseReview`).
+3. Assert **stable heuristics** only (e.g. forbidden redirect phrase, min length, structural UI).
+4. After the run, grep logs and compare `verdict`, `heuristics`, and `notes` to expected behavior documented in the flow case.
+
+Example post-run analysis:
+
+```bash
+grep '\[agent-response-review\]' /tmp/e2e-run.log
+```
+
+Reference implementation: `playwright/tests/chat/skincare-advice-on-topic.spec.ts` (ALE-85).
+
+## Flow documentation
+
+Every new E2E case needs:
+
+- Case id in `e2eTestFlows/flows/<flow>.md` (steps, assertions, notes)
+- Matching spec with case id in title and top-of-file comment
+- Cross-link in `e2eTestFlows/index.md` when adding a new flow
+
+## Environments
+
+| Target | Frontend | GraphQL | How |
+|--------|----------|---------|-----|
+| **Local** (default) | `http://localhost:3020` | `http://localhost:4020/api/public` | `npm run dev` in backend + frontend |
+| **Staging** | `E2E_BASE_URL` | `NEXT_PUBLIC_GRAPHQL_URL` in `.env.local` | Override env; see `run-e2e-automation` skill |
+
+Local E2E requires the shared Clerk E2E user — see `e2eTestFlows/SETUP.md`.
+
+## Pre-push (when E2E touched)
+
+`npm run build`, affected `npx playwright test <spec>`, and `npm test` if selectors/a11y labels changed.
