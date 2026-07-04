@@ -13,7 +13,7 @@ Setup: [`SETUP.md`](SETUP.md)
 | **P0** | Floating nav Chat ↔ Routine | [`nav-floating-pill.md`](flows/nav-floating-pill.md) | 3 |
 | **P0** | Send chat message | [`chat-new-message.md`](flows/chat-new-message.md) | 2 |
 | **P0** | Routine page loads | [`routine-view.md`](flows/routine-view.md) | 3 |
-| **P1** | Landing (signed out) | [`landing-signed-out.md`](flows/landing-signed-out.md) | 3 |
+| **P1** | Landing (signed out) | [`landing-signed-out.md`](flows/landing-signed-out.md) | 4 |
 | **P1** | Landing redirect (signed in) | [`landing-signed-in-redirect.md`](flows/landing-signed-in-redirect.md) | 1 |
 | **P1** | Agent turn completes | [`chat-agent-response.md`](flows/chat-agent-response.md) | 3 |
 | **P1** | Advice for other user | [`chat-advice-for-other.md`](flows/chat-advice-for-other.md) | 1 |
