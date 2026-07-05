@@ -60,4 +60,6 @@ Cases that require a fresh profile call `resetE2eUserData()` in `beforeEach` (se
 - **Take the Skin Quiz** → `/skincare-routine?openSkinQuiz=1` (modal on routine page)
 - **Set up my routine** → `/skincare-routine?openSetup=1` (setup modal)
 
+E2E click paths: [`chat-cta-routine-navigation.md`](chat-cta-routine-navigation.md).
+
 Signed-in visits to `/quizzes/skin-quiz` redirect to the skin quiz modal deep link.
