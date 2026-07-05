@@ -9,40 +9,39 @@
 ### skin-quiz-complete-01: Modal quiz from routine page
 
 - **Steps:**
-  1. On `/skincare-routine`, click **Take the skin quiz**
-  2. Dialog **Skin quiz** opens
-  3. Complete intro → answer questions → finish
+  1. On `/skincare-routine`, complete manual routine setup
+  2. Click **Take the skin quiz**
+  3. Dialog **Skin quiz** opens; complete intro → questions → finish
 - **Assertions:**
-  - Quiz progresses through phases (intro → questions → results/loading)
-  - On completion, modal closes or routine page shows updated state
-  - Optional: URL gains `generateRoutine=1` or recommendations drawer opens
-- **Notes:** Long flow; may use minimal answers. Regeneration can take 30s+.
+  - Modal closes after completion
+  - Routine page shows **Retake the skin quiz** after regeneration
+- **Notes:** Long flow; regeneration can take 30s+.
 
-### skin-quiz-complete-02: Full-page quiz route
+### skin-quiz-complete-02: Legacy `/quizzes/skin-quiz` redirects to routine modal
 
 - **Steps:**
-  1. Go to `/quizzes/skin-quiz`
-  2. Complete quiz flow
+  1. Go to `/quizzes/skin-quiz` while signed in
 - **Assertions:**
-  - Results screen shows **Go to chat →** or **Done**
-  - Navigation to `/chat` or `/skincare-routine` works
-- **Notes:** No floating header on quiz route.
+  - Redirects to `/skincare-routine`
+  - **Skin quiz** dialog opens (no full-page legacy quiz)
+  - Quiz can be completed in the modal
 
-### skin-quiz-complete-03: Chat CTA to quiz
+### skin-quiz-complete-03: `openSkinQuiz` deep link on empty routine
 
 - **Steps:**
-  1. From chat, click assistant CTA **Take the Skin Quiz** (if present)
+  1. Fresh user → `/skincare-routine?openSkinQuiz=1` (same URL as chat CTA)
+  2. Complete quiz in modal
 - **Assertions:**
-  - Navigates to `/quizzes/skin-quiz`
-- **Notes:** Data-dependent; tie to P2 chat CTA case or seed new user.
+  - Modal opens without established routine chrome flash
+  - Modal closes after completion
 
-### skin-quiz-retake-01: Retake from full-page results
+### skin-quiz-retake-01: Retake after first modal completion
 
 - **Steps:**
-  1. Complete full-page quiz
-  2. On results, click **Retake quiz** and complete again
+  1. Complete modal quiz from routine page (after manual setup)
+  2. Click **Retake the skin quiz** → **Retake quiz** → finish again
 - **Assertions:**
-  - Results screen returns after second completion
+  - Modal closes; hero still offers **Retake the skin quiz**
 
 ### skin-quiz-retake-02: Retake modal quiz from routine hero
 
@@ -55,3 +54,12 @@
 ## Reset policy
 
 Cases that require a fresh profile call `resetE2eUserData()` in `beforeEach` (see `scripts/resetE2eTestUserData.mjs`).
+
+## Chat CTA (ALE-92)
+
+- **Take the Skin Quiz** → `/skincare-routine?openSkinQuiz=1` (modal on routine page)
+- **Set up my routine** → `/skincare-routine?openSetup=1` (setup modal)
+
+E2E click paths: [`chat-cta-routine-navigation.md`](chat-cta-routine-navigation.md).
+
+Signed-in visits to `/quizzes/skin-quiz` redirect to the skin quiz modal deep link.

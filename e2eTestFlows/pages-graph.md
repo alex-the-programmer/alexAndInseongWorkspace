@@ -149,6 +149,7 @@ flowchart TD
 |-------|-------------------|
 | `openSetup=1` | “Set up your routine” modal (new-user empty state) |
 | `openQuiz=1` | Routine onboarding modal |
+| `openSkinQuiz=1` | Skin quiz modal |
 | `generateRoutine=1` | `generateSkincareRoutine` mutation |
 | `openRecs=1` | Recommendations drawer after generate |
 | `regenerateSource=skin-quiz` | “Updating recommendations…” loading on hero |
@@ -166,7 +167,7 @@ flowchart TD
 | `/sign-in?email=` | Sign-in with prefilled email | From sign-up wall |
 | `/sign-up?email=` | Sign-up with prefilled email | From sign-up wall |
 | Landing hero message | Sign-up wall → auth → `/chat` + pending message sent | `pendingChatMessage` |
-| Assistant CTA | `/quizzes/skin-quiz`, `/skincare-routine`, etc. | Dynamic `cta.url` |
+| Assistant CTA | `/skincare-routine?openSkinQuiz=1`, `/skincare-routine?openSetup=1` | Dynamic `cta.url` |
 | Account menu | `/skincare-routine` | |
 | Legacy `/shop` | `/chat` | Permanent redirect |
 
