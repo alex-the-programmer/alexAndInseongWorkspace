@@ -22,6 +22,8 @@ User asked for **general gentle, fragrance-free products** — not masks.
 
 **Out of scope for this plan:** Quiz / routine CTA buttons on assistant turns. Current behavior matches ALE-6 (`getChatMessages` attaches CTAs to the first assistant message). Product (Inseong) is clarifying desired CTA rules separately.
 
+**Follow-up:** [ALE-95](https://linear.app/dewly/issue/ALE-95/show-quizroutine-ctas-only-on-greeting-opening-turn) — implementation plan `implementationPlans/ALE-95-chat-cta-buttons-opening-only.md`. CTAs should only appear on the greeting opening turn, not when the user starts chat with a real message (homepage flow).
+
 **Repos:** `commerce-platform-backend` (primary), `commerce-platform-frontend` (E2E repro).
 
 **Database changes:** None.

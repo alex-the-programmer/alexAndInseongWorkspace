@@ -14,12 +14,14 @@ Setup: [`SETUP.md`](SETUP.md)
 | **P0** | Send chat message | [`chat-new-message.md`](flows/chat-new-message.md) | 2 |
 | **P0** | Routine page loads | [`routine-view.md`](flows/routine-view.md) | 3 |
 | **P1** | Landing (signed out) | [`landing-signed-out.md`](flows/landing-signed-out.md) | 4 |
+| **P1** | Homepage SEO (ALE-93) | [`homepage-seo.md`](flows/homepage-seo.md) | 2 |
 | **P1** | Landing redirect (signed in) | [`landing-signed-in-redirect.md`](flows/landing-signed-in-redirect.md) | 1 |
 | **P1** | Agent turn completes | [`chat-agent-response.md`](flows/chat-agent-response.md) | 3 |
 | **P1** | Advice for other user | [`chat-advice-for-other.md`](flows/chat-advice-for-other.md) | 1 |
 | **P1** | Product delivery (no deferral) | [`chat-product-delivery.md`](flows/chat-product-delivery.md) | 1 |
 | **P1** | Known profile / quiz | [`chat-known-profile.md`](flows/chat-known-profile.md) | 1 |
 | **P1** | Opening quiz nudge | [`chat-opening-nudge.md`](flows/chat-opening-nudge.md) | 1 |
+| **P1** | Chat CTA opening-only (ALE-95) | [`chat-cta-opening-only.md`](flows/chat-cta-opening-only.md) | 1 |
 | **P1** | Chat CTA → routine modals | [`chat-cta-routine-navigation.md`](flows/chat-cta-routine-navigation.md) | 2 |
 | **P1** | Product scope (no unprompted masks) | [`chat-product-scope.md`](flows/chat-product-scope.md) | 1 |
 | **P1** | Chat thread CRUD | [`chat-thread-management.md`](flows/chat-thread-management.md) | 4 |
