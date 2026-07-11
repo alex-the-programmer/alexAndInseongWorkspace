@@ -2,23 +2,46 @@
 
 **Priority:** P1  
 **Auth:** signed-in  
-**Preconditions:** Backend with catalog data; prompt likely to produce a Quick compare table with ≥2 products.
+**Preconditions:** Backend with catalog data; prompts tuned per product box type.
+
+## Product box types in chat
+
+| UI box | When it renders | Ordinal order |
+| ------ | --------------- | ------------- |
+| **Quick compare** | `comparison.items.length >= 2` | Columns 1→N, then discount strip |
+| **Top pick** | `comparison.items.length === 1` | Top pick card, then discount strip |
+| **Discount strip** | Cards not in `comparison.items` | After compare/top pick in global order |
+| **Plain product cards** | No comparison metadata | `productCards` array order |
+
+Follow-up references like “the first one” / “the third one” must resolve against this **global visual order**, not compare finalists only.
 
 ## Cases
 
-### chat-card-reference-01: Follow-up "the first one" references compare card #1 (ALE-97)
+### chat-card-reference-01: Quick compare — first column (ALE-97)
 
-- **Steps:**
-  1. Fresh chat
-  2. `which hand creams would you recommend for very dry hands`
-  3. `around $15 — compare your top two picks in the table`
-  4. If no compare/cards: `please show a quick compare of two hand cream options`
-  5. Read first shown product name (`comparison-product-1-name` or first `product-card-name`)
-  6. `is the first one more like Korean eucerin?`
-- **Assertions:**
-  - Quick compare visible with ≥2 products before follow-up
-  - Follow-up assistant text mentions a meaningful token from product #1 name
-  - Follow-up does **not** answer primarily about a different shown product or an unrelated SKU when referent name is absent
-  - `[agent-response-review]` logged for follow-up turn
-- **Notes:** Do not assert exact assistant prose. Post-run: grep `[agent-response-review]` and confirm `chat-card-reference-01-followup` mentions referent tokens.
+- **Steps:** hand cream discovery → budget compare prompt
+- **Assertions:** Quick compare visible; follow-up mentions `shown-product-1-name`
 - **Spec:** `playwright/tests/chat/card-reference-follow-up.spec.ts`
+
+### chat-card-reference-02: Top pick — first card (ALE-97)
+
+- **Steps:** single best cleanser pick under $25
+- **Assertions:** Top pick visible; “first one” refers to top pick card
+- **Skip when:** compare/table shown instead
+
+### chat-card-reference-03: Discount strip — third card after compare (ALE-97)
+
+- **Steps:** compare three cleansers under $25
+- **Assertions:** Compare + discount visible; ≥3 `shown-product-*` names; “third one” refers to first discount card
+- **Skip when:** discount strip or third slot missing
+
+### chat-card-reference-04: Plain product cards — first card (ALE-97)
+
+- **Steps:** two hand creams in cards without compare table
+- **Assertions:** No Quick compare / Top pick; “first one” refers to first card
+- **Skip when:** compare or top pick appears
+
+## Notes
+
+- Use `shown-product-{n}-name` test ids (global visual order).
+- Grep `[agent-response-review]` after runs; do not assert exact assistant prose.
