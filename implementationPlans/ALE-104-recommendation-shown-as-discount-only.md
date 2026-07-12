@@ -16,10 +16,10 @@
 
 | Ticket | What shipped | What ALE-104 still fixes |
 | ------ | ------------ | ------------------------ |
-| [ALE-65](ALE-65-create-a-new-landing-page.md) ([Linear](https://linear.app/dewly/issue/ALE-65)) | Single-item compare → **Top pick**; discount strip excludes comparison finalists (`8d7bbf1`) | Only applies when `comparison` metadata exists — not when enrichment is `productCards` only |
-| [ALE-18](ALE-18-fix-recommendation-of-similar-products.md) ([Linear](https://linear.app/dewly/issue/ALE-18)) | Documented duplicate-SKU bug; mitigated by hiding discount strip when all cards are finalists | Explicitly noted `productCards` only (no comparison) → **all cards under discount header** — left open |
-| [ALE-14](ALE-14-remove-redundant-info-from-the-agent-responses.md) | Claimed discount cards “exclude compared ids” | Frontend never rendered a plain **cards** box; misclassification when `comparison` is null |
-| [ALE-97](ALE-97-resolve-card-references-in-follow-ups.md) | `listShownProductSlots` + `shown-product-{n}-name` test ids | Rendering logic in `chatMessageList.tsx` did not use `listShownProductSlots` until ALE-104 |
+| [ALE-40](ALE-40-incomplete-responses.md) ([Linear](https://linear.app/dewly/issue/ALE-40)) | Completion retry when deferral + no tools; catalog fallback when tools ran | Retry could still fail — **deferral-only text was still persisted** to the user on the first turn |
+| [ALE-65](ALE-65-create-a-new-landing-page.md) ([Linear](https://linear.app/dewly/issue/ALE-65)) | Single-item compare → **Top pick**; discount strip excludes comparison finalists (`8d7bbf1`) | Only applies when `comparison` metadata exists |
+| [ALE-18](ALE-18-fix-recommendation-of-similar-products.md) ([Linear](https://linear.app/dewly/issue/ALE-18)) | Documented duplicate-SKU bug; mitigated by hiding discount strip when all cards are finalists | `productCards` only (no comparison) → all cards under discount header |
+| [ALE-97](ALE-97-resolve-card-references-in-follow-ups.md) | `listShownProductSlots` + test ids | Rendering did not use slot logic until ALE-104 |
 
 **Conclusion:** ALE-65 and ALE-18 improved compare/top-pick/discount behavior **when comparison metadata is present**. ALE-104 closes the remaining path where `comparison` is absent and every card was mislabeled as a discount alternative.
 
@@ -63,5 +63,6 @@ When `comparison` is **null/empty**, `chatMessageList.tsx` treated every `produc
 - [x] Add plain product-card group UI + `shown-product-cards-group` test id
 - [x] Update `comparisonCards.ts` helper for plain-cards detection
 - [x] Run `npm test` in frontend
-- [ ] Run affected Playwright spec when backend/agent available
+- [x] Run affected Playwright spec when backend/agent available
+- [x] `chat-recommendation-boxes-01` green locally (first turn, no deferral)
 - [ ] Manual QA (repro + ALE-97 + ALE-18 regression)
