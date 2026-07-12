@@ -11,7 +11,7 @@
 | **Quick compare** | `comparison.items.length >= 2` | Columns 1→N, then discount strip |
 | **Top pick** | `comparison.items.length === 1` | Top pick card, then discount strip |
 | **Discount strip** | Cards not in `comparison.items` | After compare/top pick in global order |
-| **Plain product cards** | No comparison metadata | `productCards` array order |
+| **Plain product cards** | No comparison metadata | `productCards` array order; heading **“Options for you”** (`data-testid="shown-product-cards-group"`) |
 
 Follow-up references like “the first one” / “the third one” must resolve against this **global visual order**, not compare finalists only.
 
