@@ -231,13 +231,13 @@ Cross-link in `e2eTestFlows/index.md` if not already listed.
 
 ## TODO
 
-- [ ] Fix `ShareNudgeCard` share URL → `absoluteUrl("/")`
-- [ ] Update `chatMessageList.test.tsx` clipboard assertion
-- [ ] Broaden `isClearlyFirstPersonAdviceRequest` body-part + condition patterns
-- [ ] Add self-directed product follow-up guard + expand `expectsProductDelivery`
-- [ ] Block deferral when user expects delivery even on misclassified `adviceForOtherUser` turns; tighten nudge copy
-- [ ] Add LLM prompt negative examples
-- [ ] Add backend unit tests (detect + invokeShoppingAgent + delivery expectations)
-- [ ] Add E2E cases `chat-advice-for-other-02` and `-03` + extend Playwright spec
-- [ ] Run affected unit tests and E2E; confirm green
-- [ ] Open PR(s) for frontend + backend
+- [x] Fix `ShareNudgeCard` share URL → `absoluteUrl("/")`
+- [x] Update `chatMessageList.test.tsx` clipboard assertion
+- [x] Broaden `isClearlyFirstPersonAdviceRequest` body-part + condition patterns
+- [x] Add self-directed product follow-up guard + expand `expectsProductDelivery`
+- [x] Block deferral when user expects delivery even on misclassified `adviceForOtherUser` turns; tighten nudge copy
+- [x] Add LLM prompt negative examples
+- [x] Add backend unit tests (detect + invokeShoppingAgent + delivery expectations)
+- [x] Add E2E cases `chat-advice-for-other-02` and `-03` + extend Playwright spec
+- [x] Run affected unit tests and E2E; confirm green
+- [x] Open PR(s) for frontend + backend
