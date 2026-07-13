@@ -27,9 +27,12 @@ Setup: [`SETUP.md`](SETUP.md)
 | **P1** | Card reference follow-up (ALE-97) | [`chat-card-reference.md`](flows/chat-card-reference.md) | 4 |
 | **P1** | Recommendation box labeling (ALE-104) | [`chat-recommendation-boxes.md`](flows/chat-recommendation-boxes.md) | 1 |
 | **P1** | Chat thread CRUD | [`chat-thread-management.md`](flows/chat-thread-management.md) | 4 |
+| **P1** | Routine recommendation Buy (ALE-103) | [`routine-recommendation-buy.md`](flows/routine-recommendation-buy.md) | 1 |
+| **P1** | Routine drawer layering (ALE-100) | [`routine-recommendation-drawer-layering.md`](flows/routine-recommendation-drawer-layering.md) | 1 |
 | **P1** | Add/remove routine product | [`routine-add-product.md`](flows/routine-add-product.md) | 2 |
 | **P1** | Skin quiz (initial + retake) | [`skin-quiz-complete.md`](flows/skin-quiz-complete.md) | 4 |
 | **P1** | Routine setup (initial + repeat) | [`routine-setup.md`](flows/routine-setup.md) | 3 |
+| **P1** | Routine onboarding skip label (ALE-98) | [`routine-onboarding-skip-label.md`](flows/routine-onboarding-skip-label.md) | 1 |
 | **P2** | Product cards in chat | [`chat-product-cards.md`](flows/chat-product-cards.md) | 4 |
 | **P2** | Local retailer card audit | [`dev-retailer-audit.md`](flows/dev-retailer-audit.md) | 2 |
 
