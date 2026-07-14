@@ -17,7 +17,7 @@ Setup: [`SETUP.md`](SETUP.md)
 | **P1** | Homepage SEO (ALE-93) | [`homepage-seo.md`](flows/homepage-seo.md) | 2 |
 | **P1** | Landing redirect (signed in) | [`landing-signed-in-redirect.md`](flows/landing-signed-in-redirect.md) | 1 |
 | **P1** | Agent turn completes | [`chat-agent-response.md`](flows/chat-agent-response.md) | 3 |
-| **P1** | Advice for other user | [`chat-advice-for-other.md`](flows/chat-advice-for-other.md) | 1 |
+| **P1** | Advice for other user | [`chat-advice-for-other.md`](flows/chat-advice-for-other.md) | 3 |
 | **P1** | Product delivery (no deferral) | [`chat-product-delivery.md`](flows/chat-product-delivery.md) | 1 |
 | **P1** | Known profile / quiz | [`chat-known-profile.md`](flows/chat-known-profile.md) | 1 |
 | **P1** | Opening quiz nudge | [`chat-opening-nudge.md`](flows/chat-opening-nudge.md) | 1 |
