@@ -293,6 +293,12 @@ Staging: same report + backfill on the direct DB URL. Kill/resume if the pooler 
 - [x] Phase 3: additive CANONICAL `seller_category_mappings` backfill + missing Jolse/SK listing-name rows
 - [x] Re-run local canonical `--force`; record presentable coverage vs **50.3%** baseline (TK unlinkable)
 - [ ] Phase 4: Jolse listing/PDP diagnosis + fix; SK PDP breadcrumb; RRS product type/collections; OY US collections if cheap — **no Tester Korea / OY Global ingest work**
+  - [x] Code: Jolse leaf `/category/{slug}/{id}/` discovery, paginate until empty, skip NEW/BEST/TIME DEAL, `JL product_no` join
+  - [x] Code: Style Korean PDP `categoryDepth*` → `SK category path` + listing name
+  - [x] Code: RoseRoseShop collection listing name on ingest
+  - [x] Code: Olive Young US listing `category_path` (strip All Products)
+  - [ ] Re-run Jolse seller-category hierarchy + listing backfill `--seller-id=484`, then canonical `--force`
+  - [ ] Re-run OY US / RRS category-products ingest and SK PDP enrich for the no-spec tail
 - [ ] Phase 5: LLM classifier on presentable unresolved only + parser tests + 100-row dry-run spot-check, then full tail
 - [ ] Phase 6: stratified accuracy sample on presentable rows; staging remap on direct host
 - [ ] Confirm ≥95% **presentable** and ≥99% Skincare/Sun-care signal coverage (or document remaining unresolvable with counts)
